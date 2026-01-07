@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Manage Routes | RDFS{% endblock %}
+
+{% block content %}
+
+<style>
+/* =====================================================
+   RDFS – MANAGE ROUTES (SCOPED)
+===================================================== */
+.rdfs-routes-scope{
+  --rdfs-blue:#112666;
+  --rdfs-blue-dark:#0c1c4a;
+  --rdfs-accent:#2563eb;
+  --rdfs-soft:#e8f4fd;
+
+  --text:#0f172a;
+  --muted:#64748b;
+
+  --shadow-sm:0 2px 6px rgba(0,0,0,.05);
+  --shadow-md:0 8px 18px rgba(12,28,74,.18);
+
+  font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+  color:var(--text);
+}
+
+/* HEADER */
+.rdfs-routes-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:1rem;
+  margin-bottom:1.5rem;
+}
+
+.rdfs-routes-title{
+  font-weight:800;
+  color:var(--rdfs-blue-dark);
+}
+
+.rdfs-routes-subtitle{
+  font-size:.9rem;
+  color:var(--muted);
+}
+
+/* BACK BUTTON */
+.rdfs-routes-back{
+  border-radius:999px;
+  font-weight:600;
+  background:#fff;
+  color:var(--rdfs-blue-dark);
+  border:1.5px solid var(--rdfs-blue);
+  white-space:nowrap;
+}
+.rdfs-routes-back:hover{
+  background:var(--rdfs-soft);
+}
+
+/* METRICS */
+.rdfs-routes-metric{
+  border-radius:16px;
+  box-shadow:var(--shadow-sm);
+}
+
+/* CHART */
+.rdfs-routes-chart{
+  border-radius:18px;
+  box-shadow:var(--shadow-md);
+}
+
+/* TABLE */
+.rdfs-routes-table thead th{
+  background:var(--rdfs-blue);
+  color:#fff;
+  font-weight:700;
+  border-color:var(--rdfs-blue-dark);
+}
+.rdfs-routes-table td{
+  vertical-align:middle;
+  font-size:.9rem;
+}
+
+/* MODAL HEADER */
+.rdfs-routes-modal-header{
+  background:linear-gradient(180deg,var(--rdfs-blue),var(--rdfs-blue-dark));
+  color:#fff;
+}
+</style>
+
+<div class="container-fluid p-4 rdfs-routes-scope">
+
+  <!-- HEADER -->
+  <div class="rdfs-routes-header">
+    <div>
+      <h3 class="rdfs-routes-title mb-1">
+        <i class="bi bi-signpost-split-fill me-2"></i>
+        Manage Routes
+      </h3>
+      <p class="rdfs-routes-subtitle mb-0">
+        Add, edit, remove, or analyze terminal routes.
+      </p>
+    </div>
+
+    <a href="{% url 'accounts:admin_dashboard' %}"
+       class="btn rdfs-routes-back">
+      <i class="bi bi-arrow-left-circle me-1"></i>
+      Back to Dashboard
+    </a>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 rdfs-routes-metric text-center p-3">
+        <h6 class="text-muted mb-1">Active Routes</h6>
+        <h3 class="fw-bold text-primary">{{ active_routes }}</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 rdfs-routes-metric text-center p-3">
+        <h6 class="text-muted mb-1">Total Trips</h6>
+        <h3 class="fw-bold text-success">{{ total_trips }}</h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 rdfs-routes-metric text-center p-3">
+        <h6 class="text-muted mb-1">Total Fees</h6>
+        <h3 class="fw-bold text-warning">
+          ₱{{ total_fees|floatformat:2 }}
+        </h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 rdfs-routes-metric text-center p-3">
+        <h6 class="text-muted mb-1">Top Route</h6>
+        {% if top_route %}
+          <strong>
+            {{ top_route.vehicle__route__origin }}
+            →
+            {{ top_route.vehicle__route__destination }}
+          </strong>
+          <div class="small text-muted">
+            {{ top_route.total_trips }} trips
+          </div>
+        {% else %}
+          <span class="text-muted">No data</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card border-0 rdfs-routes-chart mb-4">
+    <div class="card-body">
+      <h5 class="mb-3">
+        <i class="bi bi-bar-chart-fill text-primary me-2"></i>
+        Route Activity Overview
+      </h5>
+      <canvas id="rdfsRoutesChart" height="100"></canvas>
+    </div>
+  </div>
+
+  <!-- ADD ROUTE -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold"
+         style="background:var(--rdfs-blue);color:#fff;">
+      <i class="bi bi-plus-circle-fill me-2"></i>
+      Add New Route
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+
+        <div class="row g-3 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label fw-bold">Origin</label>
+            <input type="text" name="origin" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">Destination</label>
+            <input type="text" name="destination" class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold">Base Fare (₱)</label>
+            <input type="number" name="base_fare" step="0.01" class="form-control">
+          </div>
+          <div class="col-md-1">
+            <div class="form-check mt-4">
+              <input class="form-check-input" type="checkbox" name="active" checked>
+              <label class="form-check-label fw-bold">Active</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-end mt-3">
+          <button class="btn btn-primary">
+            <i class="bi bi-plus-circle-fill me-1"></i>
+            Add Route
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ROUTES TABLE -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-light fw-semibold">
+      <i class="bi bi-list-check me-2"></i>
+      Existing Routes
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped align-middle rdfs-routes-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Origin</th>
+              <th>Destination</th>
+              <th>Fare</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for route in routes %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td class="fw-semibold">{{ route.origin }}</td>
+              <td class="fw-semibold">{{ route.destination }}</td>
+              <td>₱{{ route.base_fare|floatformat:2 }}</td>
+              <td>
+                <span class="badge {% if route.active %}bg-success{% else %}bg-secondary{% endif %}">
+                  {{ route.active|yesno:"Active,Inactive" }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary rdfsRouteEditBtn"
+                        data-id="{{ route.id }}"
+                        data-origin="{{ route.origin }}"
+                        data-destination="{{ route.destination }}"
+                        data-fare="{{ route.base_fare }}"
+                        data-active="{{ route.active }}">
+                  <i class="bi bi-pencil-fill"></i>
+                </button>
+                <form method="POST" class="d-inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="route_id" value="{{ route.id }}">
+                  <button class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal fade" id="rdfsEditRouteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="route_id" id="rdfsEditRouteId">
+
+        <div class="modal-header rdfs-routes-modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-pencil-fill me-2"></i>Edit Route
+          </h5>
+          <button type="button" class="btn-close btn-close-white"
+                  data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input id="rdfsEditOrigin" name="origin" class="form-control mb-2" required>
+          <input id="rdfsEditDestination" name="destination" class="form-control mb-2" required>
+          <input id="rdfsEditFare" name="base_fare" type="number" step="0.01" class="form-control mb-2">
+          <div class="form-check">
+            <input id="rdfsEditActive" name="active" type="checkbox" class="form-check-input">
+            <label class="form-check-label fw-bold">Active</label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-success">
+            <i class="bi bi-check-circle-fill me-1"></i>Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  /* FIXED CHART DATA */
+  const chartLabels = JSON.parse('{{ chart_labels|escapejs }}');
+  const chartData   = JSON.parse('{{ chart_data|escapejs }}');
+
+  const ctx = document.getElementById('rdfsRoutesChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          data: chartData,
+          backgroundColor: 'rgba(37,99,235,.8)',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  /* EDIT MODAL */
+  document.querySelectorAll('.rdfsRouteEditBtn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      rdfsEditRouteId.value = this.dataset.id;
+      rdfsEditOrigin.value = this.dataset.origin;
+      rdfsEditDestination.value = this.dataset.destination;
+      rdfsEditFare.value = this.dataset.fare;
+      rdfsEditActive.checked = this.dataset.active === "True";
+      new bootstrap.Modal(rdfsEditRouteModal).show();
+    });
+  });
+
+});
+</script>
+
+{% endblock %}

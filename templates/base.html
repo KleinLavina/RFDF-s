@@ -1,0 +1,126 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}RDFS{% endblock %}</title>
+
+  <link rel="icon" type="image/png" href="{% static 'img/RDFS-Logo.png' %}">
+  <link rel="shortcut icon" href="{% static 'img/RDFS-Logo.png' %}">
+
+  <!-- Bootstrap & Icons -->
+  <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    /* ===============================
+       BASE LAYOUT ONLY (NO SIDEBAR UI)
+    ================================ */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .app-shell {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    .app-sidebar {
+      flex: 0 0 260px;
+      min-height: 100vh;
+    }
+
+    #main-content {
+      flex: 1;
+      min-width: 0;
+      padding: 28px;
+      background: #f8f9fa;
+    }
+
+    @media (max-width: 768px) {
+      .app-shell {
+        flex-direction: column;
+      }
+
+      .app-sidebar {
+        width: 100%;
+        min-height: auto;
+      }
+
+      #main-content {
+        padding: 16px;
+      }
+    }
+
+    .toast-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 1080;
+    }
+  </style>
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+
+{% block layout %}
+<div class="app-shell">
+
+  {% if request.user.is_authenticated %}
+    <aside class="app-sidebar">
+      {% if user.role == 'admin' %}
+        {% include 'includes/sidebar_admin.html' %}
+      {% else %}
+        {% include 'includes/sidebar_staff.html' %}
+      {% endif %}
+    </aside>
+  {% endif %}
+
+  <main id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+{% endblock %}
+
+<!-- Toasts -->
+<div class="toast-container"></div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('.toast-container');
+    if (!container) return;
+
+    {% for message in messages %}
+      (function () {
+        {% if message.tags == 'error' %}
+          var toastClass = 'danger';
+        {% else %}
+          var toastClass = '{{ message.tags }}';
+        {% endif %}
+
+        const toast = document.createElement('div');
+        toast.className = "toast align-items-center text-bg-" + toastClass + " border-0";
+        toast.innerHTML = `
+          <div class="d-flex">
+            <div class="toast-body fw-semibold">{{ message|escapejs }}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          </div>`;
+        container.appendChild(toast);
+        new bootstrap.Toast(toast, { delay: 3500 }).show();
+      })();
+    {% endfor %}
+  });
+</script>
+
+</body>
+</html>

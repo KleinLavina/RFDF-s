@@ -1,0 +1,10 @@
+{# templates/includes/sidebar.html #}
+{% if user.is_authenticated %}
+    {% if user.role == 'admin' %}
+        {% include "includes/sidebar_admin.html" %}
+    {% elif user.role == 'staff_admin' %}
+        {% include "includes/sidebar_staff.html" %}
+    {% else %}
+        {# Optional: fallback sidebar or none #}
+    {% endif %}
+{% endif %}

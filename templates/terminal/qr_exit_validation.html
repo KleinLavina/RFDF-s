@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}QR Exit Validation | RDFS{% endblock %}
+
+{% block content %}
+
+<style>
+/* =====================================================
+   RDFS – QR EXIT VALIDATION
+===================================================== */
+.rdfs-qr-exit-scope{
+  --rdfs-blue:#112666;
+  --rdfs-blue-dark:#0c1c4a;
+  --rdfs-accent:#2563eb;
+  --rdfs-soft:#e8f4fd;
+
+  --rdfs-text:#0f172a;
+  --rdfs-muted:#64748b;
+
+  --gray-100:#f7fafc;
+  --gray-200:#edf2f7;
+  --gray-300:#e2e8f0;
+
+  --success:#198754;
+  --danger:#dc3545;
+
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:0 8px 18px rgba(0,0,0,.12);
+
+  font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+  color:var(--rdfs-text);
+}
+
+/* HEADER – MATCHED */
+.rdfs-qr-exit-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:1rem;
+  margin-bottom:1.25rem;
+}
+
+.rdfs-qr-exit-title{
+  font-weight:800;
+  color:var(--rdfs-blue-dark);
+}
+
+.rdfs-qr-exit-subtitle{
+  font-size:.9rem;
+  color:var(--rdfs-muted);
+}
+
+/* RETURN BUTTON – SAME STYLE */
+.rdfs-qr-exit-back{
+  border-radius:999px;
+  font-weight:600;
+  background:#fff;
+  color:var(--rdfs-blue-dark);
+  border:1.5px solid var(--rdfs-blue);
+  white-space:nowrap;
+}
+.rdfs-qr-exit-back:hover{
+  background:var(--rdfs-soft);
+}
+
+/* INFO ALERT */
+.rdfs-qr-exit-info{
+  background:var(--rdfs-soft);
+  border-left:4px solid var(--danger);
+  border-radius:10px;
+  font-size:.85rem;
+}
+
+/* CARD */
+.rdfs-qr-exit-card{
+  border-radius:18px;
+  box-shadow:var(--shadow-md);
+  border:1px solid var(--gray-200);
+  overflow:hidden;
+}
+
+/* CARD HEADER */
+.rdfs-qr-exit-card-header{
+  background:linear-gradient(135deg,#dc3545,#9f1239);
+  color:#fff;
+}
+
+/* FEEDBACK */
+.rdfs-qr-exit-feedback{
+  font-weight:600;
+}
+
+/* FLASH */
+@keyframes rdfsFlashGreen{
+  0%{background:rgba(25,135,84,.15);}
+  50%{background:rgba(25,135,84,.45);}
+  100%{background:transparent;}
+}
+@keyframes rdfsFlashRed{
+  0%{background:rgba(220,53,69,.15);}
+  50%{background:rgba(220,53,69,.45);}
+  100%{background:transparent;}
+}
+.rdfs-exit-flash-success{animation:rdfsFlashGreen 1.4s ease;}
+.rdfs-exit-flash-error{animation:rdfsFlashRed 1.4s ease;}
+</style>
+
+<div class="container py-4 rdfs-qr-exit-scope">
+
+  <!-- HEADER -->
+  <div class="rdfs-qr-exit-header">
+    <div>
+      <h3 class="rdfs-qr-exit-title mb-1">
+        <i class="bi bi-box-arrow-right me-2"></i>
+        QR Exit Validation
+      </h3>
+      <p class="rdfs-qr-exit-subtitle mb-0">
+        Scan vehicle QR codes to confirm terminal departure.
+      </p>
+    </div>
+
+    <!-- RETURN BUTTON -->
+    <a href="{% url 'accounts:staff_dashboard' %}"
+       class="btn rdfs-qr-exit-back">
+      <i class="bi bi-arrow-left-circle me-1"></i>
+      Return to Dashboard
+    </a>
+  </div>
+
+  <!-- INFO -->
+  <div class="alert rdfs-qr-exit-info mb-4">
+    <strong>Exit Validation:</strong>
+    Scan a vehicle’s QR code to mark it as <strong>departed</strong>.
+  </div>
+
+  <!-- MAIN CARD -->
+  <div class="card rdfs-qr-exit-card">
+    <div class="card-header rdfs-qr-exit-card-header">
+      <h6 class="mb-0 fw-bold">
+        <i class="bi bi-qr-code me-2"></i>
+        Scan Vehicle QR
+      </h6>
+    </div>
+
+    <div class="card-body text-center">
+
+      <p class="text-muted mb-3" style="font-size:.95rem;">
+        The system automatically validates if the vehicle
+        is currently inside the terminal.
+      </p>
+
+      <!-- QR SCANNER -->
+      <div id="rdfsQrReader"
+           class="rounded mb-3"
+           style="width:100%;max-width:400px;margin:auto;"></div>
+
+      <!-- FEEDBACK -->
+      <div id="rdfsQrFeedback"
+           class="alert d-none mt-3 rdfs-qr-exit-feedback"
+           role="alert"></div>
+
+      <div class="mt-3">
+        <a hx-get="{% url 'terminal:terminal_queue' %}"
+           hx-target="#main-content"
+           hx-swap="innerHTML transition:true"
+           class="btn btn-outline-danger btn-sm rounded-pill">
+          <i class="bi bi-list-check me-1"></i>
+          View Terminal Queue
+        </a>
+      </div>
+
+      <!-- CSRF -->
+      <form style="display:none;">{% csrf_token %}</form>
+
+      <!-- LOG -->
+      <div id="rdfsQrScanLog"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- QR LIB -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+/* =====================================================
+   RDFS – QR EXIT LOGIC (UNCHANGED)
+===================================================== */
+const ok=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+const err=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+
+let paused=false, recent=[];
+
+function show(msg,type="info"){
+  const fb=document.getElementById("rdfsQrFeedback");
+  const scope=document.querySelector(".rdfs-qr-exit-scope");
+
+  fb.className="alert mt-3 rdfs-qr-exit-feedback";
+  fb.textContent=msg;
+  fb.classList.remove("d-none","alert-success","alert-danger","alert-info");
+
+  if(type==="success") fb.classList.add("alert-success");
+  else if(type==="danger") fb.classList.add("alert-danger");
+  else fb.classList.add("alert-info");
+
+  scope.classList.remove("rdfs-exit-flash-success","rdfs-exit-flash-error");
+  if(type==="success"){scope.classList.add("rdfs-exit-flash-success");ok.play().catch(()=>{});}
+  if(type==="danger"){scope.classList.add("rdfs-exit-flash-error");err.play().catch(()=>{});}
+}
+
+async function postQR(qr){
+  try{
+    const r=await fetch("{% url 'terminal:qr_exit_validation' %}",{
+      method:"POST",
+      headers:{
+        "X-CSRFToken":document.querySelector('[name=csrfmiddlewaretoken]').value,
+        "X-Requested-With":"XMLHttpRequest"
+      },
+      body:new URLSearchParams({qr_code:qr})
+    });
+    const d=await r.json();
+    d.status==="success"?show(d.message,"success"):show(d.message,"danger");
+    pause(d.status==="success"?4000:3000);
+  }catch{show("Network error","danger");}
+}
+
+function pause(ms){
+  paused=true;
+  setTimeout(()=>{paused=false;show("Ready for next scan","info");},ms);
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const qr=new Html5Qrcode("rdfsQrReader");
+  let last="";
+  qr.start({facingMode:"environment"},{fps:10,qrbox:250},txt=>{
+    if(paused||txt===last) return;
+    last=txt;
+    postQR(txt);
+  }).catch(e=>show("Camera error: "+e,"danger"));
+});
+</script>
+
+{% endblock %}
