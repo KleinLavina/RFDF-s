@@ -1,45 +1,45 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'styles/passenger/head01.css' %}">
 <script src="{% static 'scripts/passenger/head01.js' %}"></script>
-<div class="rdfs-header">
-  <div class="rdfs-header__container">
+<div class="rdfs-header-x1">
+  <div class="rdfs-header__container-x1">
 
     <!-- BRAND -->
-    <a class="rdfs-header__brand" href="{% url 'passenger:home' %}">
+    <a class="rdfs-header__brand-x1" href="{% url 'passenger:home' %}">
       <img
         src="{% static 'img/RDFS-Logo.png' %}"
         alt="RDFS Logo"
-        class="rdfs-header__logo"
+        class="rdfs-header__logo-x1"
       >
     </a>
 
     <!-- MOBILE TOGGLE -->
     <button
-      class="rdfs-header__toggle"
+      class="rdfs-header__toggle-x1"
       aria-label="Toggle navigation"
       aria-expanded="false">
-      <i class="bi bi-list"></i>
+      <i class="bi bi-list rdfs-icon-x1"></i>
     </button>
 
     <!-- NAVIGATION -->
-    <div class="rdfs-header__nav">
+    <div class="rdfs-header__nav-x1">
 
-      <a class="rdfs-header__link {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" 
+      <a class="rdfs-header__link-x1 {% if request.resolver_match.url_name == 'home' %}is-active-x1{% endif %}" 
          href="{% url 'passenger:home' %}">
-        <i class="bi bi-house-door"></i>
-        <span>Home</span>
+        <i class="bi bi-house-door rdfs-icon-x1"></i>
+        <span class="rdfs-text-x1">Home</span>
       </a>
 
-      <a class="rdfs-header__link {% if request.resolver_match.url_name == 'announcement' %}is-active{% endif %}" 
+      <a class="rdfs-header__link-x1 {% if request.resolver_match.url_name == 'announcement' %}is-active-x1{% endif %}" 
          href="{% url 'passenger:announcement' %}">
-        <i class="bi bi-megaphone"></i>
-        <span>Announcements</span>
+        <i class="bi bi-megaphone rdfs-icon-x1"></i>
+        <span class="rdfs-text-x1">Announcements</span>
       </a>
 
-      <a class="rdfs-header__link {% if request.resolver_match.url_name == 'public_queue' %}is-active{% endif %}" 
+      <a class="rdfs-header__link-x1 {% if request.resolver_match.url_name == 'public_queue' %}is-active-x1{% endif %}" 
          href="{% url 'passenger:public_queue' %}">
-        <i class="bi bi-truck"></i>
-        <span>Trip Schedule</span>
+        <i class="bi bi-truck rdfs-icon-x1"></i>
+        <span class="rdfs-text-x1">Trip Schedule</span>
       </a>
 
     </div>

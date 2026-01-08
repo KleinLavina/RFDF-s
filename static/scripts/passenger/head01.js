@@ -1,25 +1,36 @@
-(function(){
-  const toggle = document.querySelector('.rdfs-header__toggle');
-  const nav = document.querySelector('.rdfs-header__nav');
+document.addEventListener('DOMContentLoaded', function() {
+  const toggle = document.querySelector('.rdfs-header__toggle-x1');
+  const nav = document.querySelector('.rdfs-header__nav-x1');
+  const links = document.querySelectorAll('.rdfs-header__link-x1');
 
-  if(!toggle || !nav) return;
+  if(!toggle || !nav) {
+    console.log('Menu elements not found');
+    return;
+  }
 
-  toggle.addEventListener('click', () => {
-    const open = nav.classList.toggle('is-open');
-    toggle.setAttribute('aria-expanded', open);
+  // Initialize links as visible
+  links.forEach(link => {
+    link.style.opacity = '1';
+    link.style.transform = 'translateX(0)';
   });
 
-  document.addEventListener('click', e => {
+  toggle.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const isOpen = nav.classList.toggle('is-open-x1');
+    toggle.setAttribute('aria-expanded', isOpen);
+  });
+
+  document.addEventListener('click', function(e) {
     if(!nav.contains(e.target) && !toggle.contains(e.target)){
-      nav.classList.remove('is-open');
+      nav.classList.remove('is-open-x1');
       toggle.setAttribute('aria-expanded','false');
     }
   });
 
-  document.addEventListener('keydown', e => {
+  document.addEventListener('keydown', function(e) {
     if(e.key === 'Escape'){
-      nav.classList.remove('is-open');
+      nav.classList.remove('is-open-x1');
       toggle.setAttribute('aria-expanded','false');
     }
   });
-})();
+});
