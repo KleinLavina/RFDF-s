@@ -2,7 +2,7 @@ import re
 import uuid
 import qrcode
 from io import BytesIO
-
+from cloudinary.models import CloudinaryField
 from django.core.files import File
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -83,11 +83,13 @@ class Driver(models.Model):
     # -----------------------------
     # DRIVER PHOTO (REQUIRED)
     # -----------------------------
-    driver_photo = models.ImageField(
-        upload_to="driver_img/",
-        blank=False,
-        null=False
-    )
+    driver_photo = CloudinaryField(
+    'driver_photo',
+    blank=False,
+    null=False,
+)
+
+
 
     emergency_contact_name = models.CharField(max_length=100, blank=True, null=True)
     emergency_contact_number = models.CharField(max_length=20, blank=True, null=True)
@@ -166,7 +168,13 @@ class Vehicle(models.Model):
 
     seat_capacity = models.PositiveIntegerField(blank=True, null=True)
 
-    qr_code = models.ImageField(upload_to='qrcodes/', null=True, blank=True)
+    qr_code = CloudinaryField(
+    'qr_code',
+    blank=True,
+    null=True,
+)
+
+
     qr_value = models.CharField(max_length=255, unique=True, blank=True, null=True)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='idle')
