@@ -295,6 +295,8 @@ def tv_display_view(request, route_slug=None):
     Terminal TV Display
     - Correct route filtering using slug
     - Groups active vehicles by route
+    - Includes departure time and countdown data
+    - Shows DEPARTED if departed_at is set, otherwise shows countdown
     """
 
     # Run cleanup for consistency
@@ -319,7 +321,7 @@ def tv_display_view(request, route_slug=None):
         route_slug = route_slug.lower().strip("/")
         selected_route_name = route_map.get(route_slug)
 
-    # Base queryset of active entries
+    # Base queryset of active entries (only show vehicles still in terminal)
     logs = (
         EntryLog.objects.filter(is_active=True, status=EntryLog.STATUS_SUCCESS)
         .select_related("vehicle__assigned_driver", "vehicle__route")
@@ -330,6 +332,9 @@ def tv_display_view(request, route_slug=None):
     if selected_route_name:
         logs = logs.filter(vehicle__route__name=selected_route_name)
 
+    # Current time for countdown calculation
+    now = timezone.now()
+
     # Group output
     grouped_routes = {}
     for log in logs:
@@ -337,13 +342,33 @@ def tv_display_view(request, route_slug=None):
         d = v.assigned_driver if v else None
         route_name = v.route.name if v and v.route else "Unassigned Route"
 
-        departure_time = log.created_at + timedelta(minutes=duration)
+        # Calculate projected departure time (entry + duration)
+        projected_departure = log.created_at + timedelta(minutes=duration)
+        
+        # Check if vehicle has actually departed
+        has_departed = log.departed_at is not None
+        
+        # Calculate remaining time (only if not departed)
+        if has_departed:
+            time_remaining_seconds = 0
+            is_expired = True
+            actual_departure_time = log.departed_at
+        else:
+            time_remaining = (projected_departure - now).total_seconds()
+            time_remaining_seconds = int(time_remaining)
+            is_expired = time_remaining_seconds <= 0
+            actual_departure_time = projected_departure
 
         grouped_routes.setdefault(route_name, []).append({
             "plate": getattr(v, "license_plate", "N/A"),
             "driver": f"{d.first_name} {d.last_name}" if d else "N/A",
             "entry_time": timezone.localtime(log.created_at, ph_tz).strftime("%I:%M %p"),
-            "departure_time": timezone.localtime(departure_time, ph_tz).strftime("%I:%M %p"),
+            "departure_time": timezone.localtime(projected_departure, ph_tz).strftime("%I:%M %p"),
+            "departure_timestamp": projected_departure.isoformat(),  # For JS countdown
+            "time_remaining_seconds": max(0, time_remaining_seconds),
+            "is_expired": is_expired,
+            "has_departed": has_departed,  # NEW: Track actual departure
+            "actual_departed_at": timezone.localtime(actual_departure_time, ph_tz).strftime("%I:%M %p") if has_departed else None,
         })
 
     context = {
@@ -351,6 +376,7 @@ def tv_display_view(request, route_slug=None):
         "stay_duration": duration,
         "all_routes": all_routes,
         "selected_route": selected_route_name or "All Routes",
+        "current_time": now.isoformat(),  # For JS time sync
     }
 
     return render(request, "terminal/tv_display.html", context)
