@@ -25,6 +25,11 @@
        YOUR CSS
   ================================ -->
   <link rel="stylesheet" href="{% static 'styles/passenger/03.css' %}">
+   <link rel="stylesheet" href="{% static 'styles/passenger/04.css' %}">
+  
+  <style>
+
+  </style>
 </head>
 
 <body>
@@ -68,70 +73,162 @@
       </div>
 
       {% if queue_entries %}
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Vehicle</th>
-            <th>Route</th>
-            <th>Driver</th>
-            <th>Status</th>
-            <th>Departure</th>
-            <th>Countdown</th>
-          </tr>
-        </thead>
+        <!-- DESKTOP TABLE (hidden on mobile) -->
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Vehicle</th>
+              <th>Route</th>
+              <th>Driver</th>
+              <th>Status</th>
+              <th>Departure</th>
+              <th>Countdown</th>
+            </tr>
+          </thead>
 
-        <tbody>
+          <tbody>
+            {% for q in queue_entries %}
+            <tr class="{% if not q.is_active %}departed-row{% endif %}">
+              <td><strong>{{ forloop.counter }}</strong></td>
+
+              <td>{{ q.vehicle.license_plate }}</td>
+
+              <td>
+                <span class="route-badge">{{ q.route }}</span>
+              </td>
+
+              <td>
+                {{ q.driver.first_name }} {{ q.driver.last_name }}
+              </td>
+
+              <td>
+                {% if q.is_active %}
+                  <span class="status active">Boarding</span>
+                {% else %}
+                  <span class="status departed">Departed</span>
+                {% endif %}
+              </td>
+
+              <!-- ✅ FIXED DEPARTURE COLUMN -->
+              <td>
+                {% if q.departed_at %}
+                  {{ q.departed_at|date:"M d, Y h:i A" }}
+                {% else %}
+                  {{ q.expiry_time|date:"M d, Y h:i A" }}
+                {% endif %}
+              </td>
+
+              <!-- ✅ REAL-TIME COUNTDOWN -->
+              <td>
+                {% if q.is_expired %}
+                  <span class="badge bg-danger">Time Expired</span>
+                {% elif not q.is_active %}
+                  <span class="badge bg-secondary">Departed</span>
+                {% else %}
+                  <!-- Simplified data attribute -->
+                  <span class="countdown" 
+                        data-expiry="{{ q.expiry_time|date:'U' }}">
+                    --
+                  </span>
+                {% endif %}
+              </td>
+
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        
+        <!-- MOBILE CARDS (hidden on desktop) -->
+        <div class="mobile-cards-container">
           {% for q in queue_entries %}
-          <tr class="{% if not q.is_active %}departed-row{% endif %}">
-            <td><strong>{{ forloop.counter }}</strong></td>
-
-            <td>{{ q.vehicle.license_plate }}</td>
-
-            <td>
-              <span class="route-badge">{{ q.route }}</span>
-            </td>
-
-            <td>
-              {{ q.driver.first_name }} {{ q.driver.last_name }}
-            </td>
-
-            <td>
-              {% if q.is_active %}
-                <span class="status active">Boarding</span>
-              {% else %}
-                <span class="status departed">Departed</span>
-              {% endif %}
-            </td>
-
-            <!-- ✅ FIXED DEPARTURE COLUMN -->
-            <td>
-              {% if q.departed_at %}
-                {{ q.departed_at|date:"M d, Y h:i A" }}
-              {% else %}
-                {{ q.expiry_time|date:"M d, Y h:i A" }}
-              {% endif %}
-            </td>
-
-            <!-- ✅ REAL-TIME COUNTDOWN -->
-            <td>
-              {% if q.is_expired %}
-                <span class="badge bg-danger">Time Expired</span>
-              {% elif not q.is_active %}
-                <span class="badge bg-secondary">Departed</span>
-              {% else %}
-                <!-- Simplified data attribute -->
-                <span class="countdown" 
-                      data-expiry="{{ q.expiry_time|date:'U' }}">
-                  --
-                </span>
-              {% endif %}
-            </td>
-
-          </tr>
+          <div class="vehicle-card" data-expiry="{{ q.expiry_time|date:'U' }}">
+            <!-- CARD HEADER -->
+            <div class="card-header">
+              <div class="card-number">{{ forloop.counter }}</div>
+              <div class="card-plate">
+                <i class="bi bi-truck"></i> {{ q.vehicle.license_plate }}
+              </div>
+            </div>
+            
+            <!-- CARD DETAILS -->
+            <div class="card-details">
+              <!-- ROUTE -->
+              <div class="detail-row">
+                <div class="detail-icon">
+                  <i class="bi bi-signpost"></i>
+                </div>
+                <div class="detail-content">
+                  <div class="detail-label">Route</div>
+                  <div class="route-tag">{{ q.route }}</div>
+                </div>
+              </div>
+              
+              <!-- DRIVER -->
+              <div class="detail-row">
+                <div class="detail-icon">
+                  <i class="bi bi-person-badge"></i>
+                </div>
+                <div class="detail-content">
+                  <div class="detail-label">Driver</div>
+                  <div class="detail-value">{{ q.driver.first_name }} {{ q.driver.last_name }}</div>
+                </div>
+              </div>
+              
+              <!-- DEPARTURE TIME -->
+              <div class="detail-row">
+                <div class="detail-icon">
+                  <i class="bi bi-clock"></i>
+                </div>
+                <div class="detail-content">
+                  <div class="detail-label">Departure Time</div>
+                  <div class="detail-value">
+                    {% if q.departed_at %}
+                      {{ q.departed_at|date:"M d, Y h:i A" }}
+                    {% else %}
+                      {{ q.expiry_time|date:"M d, Y h:i A" }}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- CARD FOOTER -->
+            <div class="card-footer">
+              <!-- STATUS -->
+              <div>
+                {% if q.is_active %}
+                  <span class="status-badge-mobile status-active-mobile">
+                    <i class="bi bi-people-fill"></i> Boarding
+                  </span>
+                {% else %}
+                  <span class="status-badge-mobile status-departed-mobile">
+                    <i class="bi bi-check-circle-fill"></i> Departed
+                  </span>
+                {% endif %}
+              </div>
+              
+              <!-- COUNTDOWN/TIMER -->
+              <div>
+                {% if q.is_expired %}
+                  <span class="expired-badge-mobile">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Expired
+                  </span>
+                {% elif not q.is_active %}
+                  <span class="departed-badge-mobile">
+                    <i class="bi bi-check-circle"></i> Departed
+                  </span>
+                {% else %}
+                  <span class="countdown-mobile countdown-mobile-element" 
+                        data-expiry="{{ q.expiry_time|date:'U' }}">
+                    --
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
           {% endfor %}
-        </tbody>
-      </table>
+        </div>
       {% else %}
         <div class="p-5 text-center text-muted">
           <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
@@ -156,19 +253,12 @@
 (function () {
   // Calculate server time from expiry timestamps
   function getServerTimeOffset() {
-    const countdownElements = document.querySelectorAll('.countdown');
+    const countdownElements = document.querySelectorAll('.countdown, .countdown-mobile-element');
     if (countdownElements.length === 0) return 0;
     
     const firstEl = countdownElements[0];
     const expiryTimestamp = parseInt(firstEl.dataset.expiry, 10);
     const clientTimestamp = Math.floor(Date.now() / 1000);
-    
-    // Estimate remaining time from initial page load
-    const remainingText = firstEl.textContent;
-    if (remainingText && remainingText !== '--') {
-      // Parse the displayed time to estimate server time
-      return 0; // Default to 0 if we can't calculate
-    }
     
     return 0; // Default offset
   }
@@ -192,9 +282,9 @@
 
   function updateAllCountdowns() {
     const now = Math.floor(Date.now() / 1000) - timeOffset;
-    const countdownElements = document.querySelectorAll('.countdown');
     
-    countdownElements.forEach(el => {
+    // Update desktop table countdowns
+    document.querySelectorAll('.countdown').forEach(el => {
       const expiryTimestamp = parseInt(el.dataset.expiry, 10);
       if (isNaN(expiryTimestamp)) return;
       
@@ -202,7 +292,6 @@
       
       if (remaining <= 0) {
         el.innerHTML = '<span class="badge bg-danger">Time Expired</span>';
-        // Update row status if countdown expires
         const row = el.closest('tr');
         if (row && !row.classList.contains('departed-row')) {
           const statusCell = row.querySelector('.status.active');
@@ -218,9 +307,29 @@
       el.textContent = formatTime(remaining);
       el.classList.remove('text-danger');
       
-      // Add warning class when under 5 minutes
-      if (remaining < 300) { // 5 minutes = 300 seconds
+      if (remaining < 300) {
         el.classList.add('text-danger');
+      }
+    });
+    
+    // Update mobile card countdowns
+    document.querySelectorAll('.countdown-mobile-element').forEach(el => {
+      const expiryTimestamp = parseInt(el.dataset.expiry, 10);
+      if (isNaN(expiryTimestamp)) return;
+      
+      const remaining = expiryTimestamp - now;
+      
+      if (remaining <= 0) {
+        el.className = 'expired-badge-mobile';
+        el.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Expired';
+        return;
+      }
+      
+      el.textContent = formatTime(remaining);
+      el.classList.remove('countdown-danger');
+      
+      if (remaining < 300) {
+        el.classList.add('countdown-danger');
       }
     });
     
@@ -228,15 +337,37 @@
     requestAnimationFrame(updateAllCountdowns);
   }
 
-  // Initialize countdowns when page loads
+  // Handle responsive switching
+  function handleResponsiveSwitch() {
+    const isMobile = window.innerWidth <= 768;
+    const cardsContainer = document.querySelector('.mobile-cards-container');
+    const table = document.querySelector('table');
+    
+    if (isMobile) {
+      // On mobile: hide table, show cards
+      if (table) table.style.display = 'none';
+      if (cardsContainer) cardsContainer.style.display = 'flex';
+    } else {
+      // On desktop: show table, hide cards
+      if (table) table.style.display = 'table';
+      if (cardsContainer) cardsContainer.style.display = 'none';
+    }
+  }
+
+  // Initialize everything when page loads
   document.addEventListener('DOMContentLoaded', function() {
+    // Start countdowns
     updateAllCountdowns();
+    
+    // Handle responsive switching
+    handleResponsiveSwitch();
+    window.addEventListener('resize', handleResponsiveSwitch);
   });
 
   // Auto-refresh the page every 60 seconds to sync with server data
   setTimeout(function() {
     window.location.reload();
-  }, 60000); // 60 seconds
+  }, 60000);
 
 })();
 </script>
