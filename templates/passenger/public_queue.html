@@ -117,10 +117,12 @@
             <td>
               {% if q.is_expired %}
                 <span class="badge bg-danger">Time Expired</span>
+              {% elif not q.is_active %}
+                <span class="badge bg-secondary">Departed</span>
               {% else %}
-                <span
-                  class="countdown"
-                  data-remaining="{{ q.remaining_seconds }}">
+                <!-- Simplified data attribute -->
+                <span class="countdown" 
+                      data-expiry="{{ q.expiry_time|date:'U' }}">
                   --
                 </span>
               {% endif %}
@@ -152,34 +154,90 @@
 ================================ -->
 <script>
 (function () {
+  // Calculate server time from expiry timestamps
+  function getServerTimeOffset() {
+    const countdownElements = document.querySelectorAll('.countdown');
+    if (countdownElements.length === 0) return 0;
+    
+    const firstEl = countdownElements[0];
+    const expiryTimestamp = parseInt(firstEl.dataset.expiry, 10);
+    const clientTimestamp = Math.floor(Date.now() / 1000);
+    
+    // Estimate remaining time from initial page load
+    const remainingText = firstEl.textContent;
+    if (remainingText && remainingText !== '--') {
+      // Parse the displayed time to estimate server time
+      return 0; // Default to 0 if we can't calculate
+    }
+    
+    return 0; // Default offset
+  }
+  
+  const timeOffset = getServerTimeOffset();
+  
   function formatTime(seconds) {
+    if (seconds <= 0) {
+      return '00:00';
+    }
+    
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-
+    const secs = seconds % 60;
+    
     if (hours > 0) {
-      return `${hours}h ${minutes}m`;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
-    return `${minutes}m`;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  function startCountdown(el) {
-    let remaining = parseInt(el.dataset.remaining, 10);
-
-    function tick() {
+  function updateAllCountdowns() {
+    const now = Math.floor(Date.now() / 1000) - timeOffset;
+    const countdownElements = document.querySelectorAll('.countdown');
+    
+    countdownElements.forEach(el => {
+      const expiryTimestamp = parseInt(el.dataset.expiry, 10);
+      if (isNaN(expiryTimestamp)) return;
+      
+      const remaining = expiryTimestamp - now;
+      
       if (remaining <= 0) {
         el.innerHTML = '<span class="badge bg-danger">Time Expired</span>';
+        // Update row status if countdown expires
+        const row = el.closest('tr');
+        if (row && !row.classList.contains('departed-row')) {
+          const statusCell = row.querySelector('.status.active');
+          if (statusCell) {
+            statusCell.textContent = 'Departed';
+            statusCell.classList.remove('active');
+            statusCell.classList.add('departed');
+          }
+        }
         return;
       }
-
+      
       el.textContent = formatTime(remaining);
-      remaining--;
-      setTimeout(tick, 1000);
-    }
-
-    tick();
+      el.classList.remove('text-danger');
+      
+      // Add warning class when under 5 minutes
+      if (remaining < 300) { // 5 minutes = 300 seconds
+        el.classList.add('text-danger');
+      }
+    });
+    
+    // Schedule next update
+    requestAnimationFrame(updateAllCountdowns);
   }
 
-  document.querySelectorAll('.countdown').forEach(startCountdown);
+  // Initialize countdowns when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    updateAllCountdowns();
+  });
+
+  // Auto-refresh the page every 60 seconds to sync with server data
+  setTimeout(function() {
+    window.location.reload();
+  }, 60000); // 60 seconds
+
 })();
 </script>
 

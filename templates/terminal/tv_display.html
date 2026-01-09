@@ -7,466 +7,10 @@
   <title>Terminal TV Display | RDFS</title>
 
   <link rel="icon" type="image/png" href="{% static 'img/RDFS-Logo.png' %}">
+  <link rel="stylesheet" href="{% static 'styles/terminal/01.css' %}">
   <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-
-  <style>
-  /* =====================================================
-     RDFS – TERMINAL TV DISPLAY - UPDATED COLOR SCHEME
-  ===================================================== */
-  :root{
-    --rdfs-blue:#112666;
-    --rdfs-blue-dark:#0c1c4a;
-    --rdfs-accent:#2563eb;
-    --rdfs-soft:#e8f4fd;
-
-    /* NEW COLOR PALETTE */
-    --muted-light-blue:#a8d5e2;
-    --muted-light-blue-dark:#7ab8d3;
-    --dark-blue:#1e3a5f;
-    --dark-blue-hover:#2d5278;
-    --muted-light-green:#b8dac3;
-    --muted-green:#8bc99a;
-    --soft-cream:#f4f1e8;
-    --warm-gray:#e5e0d8;
-    --soft-coral:#f6a192;
-    --soft-peach:#ffd5b5;
-
-    --text:#2c3e50;
-    --muted:#64748b;
-
-    --gray-100:#f7fafc;
-    --gray-200:#edf2f7;
-    --gray-300:#e2e8f0;
-
-    --danger:#e74c3c;
-    --warning:#f39c12;
-    --success:#27ae60;
-
-    --shadow-sm:0 1px 3px rgba(0,0,0,.08);
-    --shadow-md:0 8px 18px rgba(0,0,0,.12);
-  }
-
-  body{
-    background:linear-gradient(180deg,#ffffff 0%,#eef4ff 100%);
-    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
-    font-size:1.35rem;
-    color:var(--text);
-    overflow-x:hidden;
-  }
-
-  /* HEADER - KEEP EXISTING */
-  .tv-header{
-    background:linear-gradient(135deg,var(--rdfs-blue),var(--rdfs-accent));
-    color:#fff;
-    padding:1.5rem 2rem;
-    box-shadow:var(--shadow-md);
-    text-align:center;
-    position:relative;
-    border-bottom:4px solid rgba(255,255,255,.1);
-  }
-
-  .tv-header h2{
-    font-weight:800;
-    font-size:2.2rem;
-    margin-bottom:.25rem;
-    letter-spacing:-0.5px;
-  }
-
-  .tv-sub{
-    font-size:1.2rem;
-    color:#e8f4fd;
-    font-weight:500;
-  }
-
-  .tv-clock{
-    font-size:1.2rem;
-    font-weight:600;
-    background:rgba(255,255,255,.15);
-    padding:.4rem 1rem;
-    border-radius:12px;
-    display:inline-block;
-    margin-top:.5rem;
-    font-family:'JetBrains Mono',monospace;
-  }
-
-  /* HEADER BUTTONS - KEEP EXISTING */
-  .tv-btn{
-    position:absolute;
-    top:50%;
-    transform:translateY(-50%);
-    padding:.6rem 1.5rem;
-    font-size:1rem;
-    font-weight:700;
-    border-radius:12px;
-    border:2px solid rgba(255,255,255,.3);
-    background:rgba(255,255,255,.15);
-    color:#fff;
-    box-shadow:var(--shadow-sm);
-    transition:.3s ease;
-    text-decoration:none;
-    backdrop-filter:blur(10px);
-  }
-  .tv-btn:hover{
-    background:rgba(255,255,255,.25);
-    border-color:rgba(255,255,255,.5);
-    transform:translateY(-50%) scale(1.05);
-  }
-  .tv-btn.back{ left:25px; }
-  .tv-btn.full{ right:25px; }
-
-  /* CONTAINER HEADER - KEEP EXISTING */
-  .container-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin:1.5rem 0 .5rem;
-    padding:1rem;
-    background:#fff;
-    border-radius:16px;
-    box-shadow:var(--shadow-sm);
-  }
-
-  .container-title{
-    font-weight:800;
-    font-size:1.6rem;
-    color:var(--rdfs-blue-dark);
-  }
-
-  /* ROUTE FILTER - KEEP EXISTING */
-  .route-filter{
-    display:flex;
-    align-items:center;
-    gap:.75rem;
-    background:var(--gray-100);
-    padding:.5rem 1rem;
-    border-radius:12px;
-  }
-
-  .route-filter label{
-    font-size:.95rem;
-    font-weight:600;
-    color:var(--rdfs-blue);
-    white-space:nowrap;
-  }
-
-  .route-filter select{
-    width:280px;
-    height:48px;
-    font-size:1rem;
-    border-radius:12px;
-    border:2px solid var(--rdfs-accent);
-    padding:0 1.25rem;
-    font-weight:600;
-    background:#fff;
-    color:var(--rdfs-blue);
-    transition:.2s ease;
-  }
-  .route-filter select:focus{
-    border-color:var(--rdfs-blue);
-    box-shadow:0 0 0 3px rgba(37,99,235,.2);
-    outline:none;
-  }
-
-  /* ROUTE SECTION - UPDATED COLORS */
-  .route-section{
-    border-radius:18px;
-    padding:1.5rem;
-    margin-bottom:2rem;
-    box-shadow:var(--shadow-md);
-    border:2px solid var(--muted-light-blue);
-    background:linear-gradient(135deg, var(--soft-cream) 0%, #ffffff 100%);
-    transition:transform .3s ease, box-shadow .3s ease;
-  }
-  .route-section:hover{
-    transform:translateY(-4px);
-    box-shadow:0 12px 24px rgba(0,0,0,.15);
-  }
-
-  .route-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-size:1.6rem;
-    font-weight:800;
-    padding:1rem 1.5rem;
-    border-radius:14px;
-    margin-bottom:1.5rem;
-    color:#fff;
-    background:linear-gradient(135deg, var(--dark-blue) 0%, var(--dark-blue-hover) 100%);
-    border-left:6px solid var(--muted-light-green);
-    box-shadow:var(--shadow-sm);
-  }
-
-  .route-count{
-    font-size:1rem;
-    font-weight:600;
-    color:var(--dark-blue);
-    background:var(--muted-light-green);
-    padding:.4rem 1rem;
-    border-radius:20px;
-    display:flex;
-    align-items:center;
-    gap:.5rem;
-  }
-
-  /* TABLE - UPDATED DESIGN */
-  table{
-    background:#fff;
-    border-radius:16px;
-    overflow:hidden;
-    font-size:1.25rem;
-    border:2px solid var(--muted-light-blue);
-  }
-
-  thead th{
-    background:linear-gradient(135deg, var(--dark-blue) 0%, #2d5278 100%);
-    color:#fff;
-    text-align:center;
-    font-size:1.1rem;
-    padding:1.2rem 1rem;
-    border:none;
-    font-weight:600;
-    letter-spacing:.5px;
-    border-bottom:3px solid var(--muted-light-blue);
-  }
-  thead th i{
-    margin-right:.5rem;
-    font-size:1.1em;
-    color:var(--muted-light-green);
-  }
-
-  tbody td{
-    text-align:center;
-    vertical-align:middle;
-    padding:1.5rem 1rem;
-    font-weight:500;
-    border:1px solid var(--warm-gray);
-    background:#fff;
-  }
-
-  tbody tr{
-    transition:all .3s ease;
-    border-bottom:2px solid var(--warm-gray);
-  }
-  tbody tr:hover{
-    background:linear-gradient(90deg, var(--soft-cream) 0%, #ffffff 100%);
-    transform:scale(1.01);
-    box-shadow:0 4px 12px rgba(0,0,0,.08);
-  }
-
-  /* VEHICLE INFO STYLING - UPDATED */
-  .vehicle-plate{
-    font-family:'JetBrains Mono',monospace;
-    font-weight:700;
-    font-size:1.35rem;
-    color:var(--dark-blue);
-    background:linear-gradient(135deg, var(--muted-light-blue) 0%, var(--muted-light-blue-dark) 100%);
-    padding:.6rem 1.2rem;
-    border-radius:10px;
-    display:inline-block;
-    border:2px solid var(--muted-light-blue-dark);
-    box-shadow:var(--shadow-sm);
-  }
-
-  .driver-info{
-    font-size:1.15rem;
-    color:var(--text);
-    font-weight:600;
-  }
-  .driver-info i{
-    color:var(--dark-blue);
-  }
-
-  .entry-time{
-    font-family:'JetBrains Mono',monospace;
-    font-weight:600;
-    color:var(--dark-blue);
-    background:var(--soft-cream);
-    padding:.5rem 1rem;
-    border-radius:8px;
-    display:inline-block;
-    border:1px solid var(--warm-gray);
-  }
-  .entry-time i{
-    color:var(--muted-green);
-  }
-
-  /* COUNTDOWN CONTAINER - NEW DESIGN */
-  .countdown-container{
-    min-width:280px;
-    display:flex;
-    flex-direction:column;
-    gap:.5rem;
-  }
-
-  .departure-time-display{
-    font-family:'JetBrains Mono',monospace;
-    font-weight:600;
-    font-size:1.2rem;
-    color:var(--dark-blue);
-    background:var(--soft-cream);
-    padding:.5rem 1rem;
-    border-radius:8px;
-    display:inline-block;
-    border:1px solid var(--warm-gray);
-    text-align:center;
-  }
-  .departure-time-display i{
-    color:var(--muted-green);
-  }
-  .departure-time-display.departed{
-    background:linear-gradient(135deg, var(--dark-blue) 0%, var(--dark-blue-hover) 100%);
-    color:#fff;
-    border-color:var(--dark-blue);
-  }
-  .departure-time-display.departed i{
-    color:var(--muted-light-blue);
-  }
-
-  /* STATUS BADGES - UPDATED COLORS */
-  .status-badge{
-    font-size:1.15rem;
-    padding:.65rem 1.1rem;
-    border-radius:12px;
-    font-weight:700;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:.6rem;
-    min-width:200px;
-    transition:all .3s ease;
-    border:2px solid transparent;
-    box-shadow:var(--shadow-sm);
-  }
-
-  .status-badge i{
-    font-size:1.2em;
-  }
-
-  /* BOARDING STATE - Muted Light Green */
-  .status-boarding{
-    background:linear-gradient(135deg, var(--muted-light-green) 0%, var(--muted-green) 100%);
-    color:var(--dark-blue);
-    border-color:var(--muted-green);
-  }
-
-  /* COUNTDOWN STATE - Soft Peach/Coral */
-  .status-countdown{
-    background:linear-gradient(135deg, var(--soft-peach) 0%, var(--soft-coral) 100%);
-    color:var(--dark-blue);
-    border-color:var(--soft-coral);
-    animation:pulse-warning 2s ease-in-out infinite;
-  }
-
-  /* DEPARTED STATE - Dark Blue */
-  .status-departed{
-    background:linear-gradient(135deg, var(--dark-blue) 0%, var(--dark-blue-hover) 100%);
-    color:#fff;
-    border-color:var(--muted-light-blue);
-    animation:pulse-departed 1.5s ease-in-out infinite;
-  }
-
-  @keyframes pulse-warning{
-    0%, 100%{
-      box-shadow:0 0 0 0 rgba(246,161,146,.7);
-    }
-    50%{
-      box-shadow:0 0 0 8px rgba(246,161,146,0);
-    }
-  }
-
-  @keyframes pulse-departed{
-    0%, 100%{
-      transform:scale(1);
-      box-shadow:0 0 15px rgba(30,58,95,.5);
-    }
-    50%{
-      transform:scale(1.03);
-      box-shadow:0 0 20px rgba(30,58,95,.8);
-    }
-  }
-
-  /* PROGRESS BAR - UPDATED */
-  .progress-container{
-    margin-top:.5rem;
-  }
-
-  .progress{
-    height:14px;
-    border-radius:10px;
-    background:var(--warm-gray);
-    overflow:hidden;
-    box-shadow:inset 0 2px 4px rgba(0,0,0,.1);
-    border:1px solid var(--muted-light-blue);
-  }
-
-  .progress-bar{
-    transition:width 1s linear, background .3s ease;
-    border-radius:10px;
-    position:relative;
-    height:100%;
-  }
-
-  .progress-bar::after{
-    content:'';
-    position:absolute;
-    top:0;
-    left:0;
-    right:0;
-    bottom:0;
-    background:linear-gradient(90deg,
-      transparent 0%,
-      rgba(255,255,255,.4) 50%,
-      transparent 100%);
-    animation:shimmer 2s infinite;
-  }
-
-  @keyframes shimmer{
-    0%{transform:translateX(-100%);}
-    100%{transform:translateX(100%);}
-  }
-
-  .progress-bar.glow{
-    box-shadow:0 0 15px 5px rgba(231,76,60,.6);
-  }
-
-  /* COUNTDOWN TIMER TEXT */
-  .countdown-timer{
-    font-family:'JetBrains Mono',monospace;
-    font-size:1.3rem;
-    font-weight:700;
-    letter-spacing:1.5px;
-  }
-
-  /* ALERT STYLING */
-  .alert{
-    font-size:1.4rem;
-    border-radius:16px;
-    padding:1.5rem;
-    border:2px solid var(--muted-light-blue);
-    box-shadow:var(--shadow-sm);
-    background:var(--soft-cream);
-  }
-
-  /* RESPONSIVE ADJUSTMENTS */
-  @media (max-width:1200px){
-    body{font-size:1.2rem;}
-    .tv-header h2{font-size:1.8rem;}
-    .route-header{font-size:1.4rem;}
-    .status-badge{min-width:180px;}
-  }
-
-  @media (max-width:768px){
-    .tv-btn{position:relative;top:0;transform:none;margin:.5rem;}
-    .tv-header{padding:1rem;}
-    .container-header{flex-direction:column;gap:1rem;}
-    .route-filter{width:100%;}
-    .route-filter select{width:100%;}
-    .route-section{padding:1rem;}
-  }
-  </style>
 </head>
 
 <body>
@@ -554,7 +98,9 @@
               {% for v in vehicles %}
               <tr data-departure="{{ v.departure_timestamp }}" 
                   data-has-departed="{{ v.has_departed|yesno:'true,false' }}"
-                  data-plate="{{ v.plate }}">
+                  data-plate="{{ v.plate }}"
+                  data-departure-time="{{ v.departure_time }}"
+                  data-actual-departed="{{ v.actual_departed_at|default:'' }}">
                 <td>
                   <span class="entry-time">
                     <i class="fa-solid fa-calendar-check me-1"></i>{{ v.entry_time }}
@@ -604,9 +150,7 @@
                     </span>
                   {% else %}
                     <!-- Still in terminal - show countdown -->
-                    <span class="status-badge status-boarding countdown-element"
-                          data-seconds="{{ v.time_remaining_seconds }}"
-                          data-expired="{{ v.is_expired|yesno:'true,false' }}">
+                    <span class="status-badge status-boarding countdown-element">
                       <i class="fa-solid fa-clock"></i>
                       <span class="countdown-text">Loading...</span>
                     </span>
@@ -629,7 +173,7 @@
 
 <script>
 /* ===================================================
-   CLOCK UPDATE
+   CLOCK UPDATE - SMOOTH REAL-TIME
 =================================================== */
 function updateDateTime() {
   const now = new Date();
@@ -663,23 +207,23 @@ function filterRoute(slug){
 }
 
 /* ===================================================
-   COUNTDOWN LOGIC - FIXED FOR REAL-TIME
+   COUNTDOWN LOGIC - REAL-TIME SMOOTH UPDATES
 =================================================== */
-function updateCountdowns(){
-  const now = Date.now();
+function updateAllCountdowns() {
+  const now = new Date().getTime();
   const departureLimit = {{ stay_duration }} * 60 * 1000; // Convert minutes to milliseconds
   
   document.querySelectorAll(".countdown-element").forEach(badge => {
     const row = badge.closest('tr');
     
-    // Skip if vehicle has already departed (handled server-side)
+    // Skip if vehicle has already departed
     if (row.dataset.hasDeparted === 'true') {
       return;
     }
     
     const departureTime = new Date(row.dataset.departure).getTime();
     
-    // CRITICAL FIX: Check if departure time is valid
+    // Check if departure time is valid
     if (isNaN(departureTime)) {
       console.error('Invalid departure time:', row.dataset.departure);
       return;
@@ -689,16 +233,18 @@ function updateCountdowns(){
     const progressBar = row.querySelector(".progress-bar");
     
     if (timeDiff <= 0) {
-      // TIME EXPIRED (but vehicle hasn't physically departed yet)
+      // TIME EXPIRED
       badge.className = "status-badge status-departed";
       badge.innerHTML = '<i class="fa-solid fa-hourglass-end"></i> <span class="countdown-text">TIME EXPIRED</span>';
       
-      progressBar.style.width = "100%";
-      progressBar.style.background = "linear-gradient(90deg, var(--danger), #c0392b)";
-      progressBar.classList.add("glow");
+      if (progressBar) {
+        progressBar.style.width = "100%";
+        progressBar.style.background = "linear-gradient(90deg, var(--danger), #c0392b)";
+        progressBar.classList.add("glow");
+      }
       
     } else if (timeDiff <= departureLimit) {
-      // COUNTDOWN ACTIVE
+      // COUNTDOWN ACTIVE - REAL-TIME SMOOTH UPDATES
       const totalMinutes = Math.floor(timeDiff / 60000);
       const seconds = Math.floor((timeDiff % 60000) / 1000);
       
@@ -708,44 +254,73 @@ function updateCountdowns(){
       badge.className = "status-badge status-countdown";
       badge.innerHTML = `<i class="fa-solid fa-stopwatch"></i> <span class="countdown-text countdown-timer">${minsStr}:${secsStr}</span>`;
       
-      // Progress calculation
-      const progressPercent = 100 - (timeDiff / departureLimit) * 100;
-      progressBar.style.width = `${Math.min(100, Math.max(0, progressPercent))}%`;
-      
-      // Color gradient based on urgency
-      if (progressPercent > 75) {
-        progressBar.style.background = "linear-gradient(90deg, #e74c3c, #c0392b)";
-      } else if (progressPercent > 50) {
-        progressBar.style.background = "linear-gradient(90deg, var(--soft-coral), #e67e73)";
-      } else if (progressPercent > 25) {
-        progressBar.style.background = "linear-gradient(90deg, var(--soft-peach), var(--soft-coral))";
-      } else {
-        progressBar.style.background = "linear-gradient(90deg, var(--muted-light-blue), var(--muted-light-blue-dark))";
+      // Progress calculation for smooth animation
+      if (progressBar) {
+        const progressPercent = 100 - (timeDiff / departureLimit) * 100;
+        const currentWidth = parseFloat(progressBar.style.width) || 0;
+        
+        // Smooth transition for progress bar
+        const targetWidth = Math.min(100, Math.max(0, progressPercent));
+        if (Math.abs(currentWidth - targetWidth) > 1) {
+          progressBar.style.width = `${targetWidth}%`;
+          progressBar.style.transition = 'width 0.5s ease';
+        } else {
+          progressBar.style.width = `${targetWidth}%`;
+        }
+        
+        // Color gradient based on urgency
+        if (progressPercent > 75) {
+          progressBar.style.background = "linear-gradient(90deg, #e74c3c, #c0392b)";
+        } else if (progressPercent > 50) {
+          progressBar.style.background = "linear-gradient(90deg, var(--soft-coral), #e67e73)";
+        } else if (progressPercent > 25) {
+          progressBar.style.background = "linear-gradient(90deg, var(--soft-peach), var(--soft-coral))";
+        } else {
+          progressBar.style.background = "linear-gradient(90deg, var(--muted-light-blue), var(--muted-light-blue-dark))";
+        }
+        
+        // Add pulse animation when under 5 minutes
+        if (timeDiff < 5 * 60 * 1000) { // 5 minutes
+          if (!progressBar.classList.contains('pulse')) {
+            progressBar.classList.add('pulse');
+          }
+        } else {
+          progressBar.classList.remove('pulse');
+        }
+        
+        progressBar.classList.remove("glow");
       }
-      progressBar.classList.remove("glow");
       
     } else {
-      // BOARDING
+      // BOARDING (still have plenty of time)
       badge.className = "status-badge status-boarding";
       badge.innerHTML = '<i class="fa-solid fa-users"></i> <span class="countdown-text">BOARDING</span>';
       
-      progressBar.style.width = "0%";
-      progressBar.classList.remove("glow");
+      if (progressBar) {
+        progressBar.style.width = "0%";
+        progressBar.classList.remove("glow", "pulse");
+      }
     }
   });
+  
+  // Schedule next update using requestAnimationFrame for smooth 60fps updates
+  requestAnimationFrame(updateAllCountdowns);
 }
 
 /* ===================================================
-   AUTO REFRESH - OPTIMIZED FOR SMOOTH COUNTDOWN
+   AUTO REFRESH - NON-BLOCKING
 =================================================== */
 let refreshInProgress = false;
+let lastRefresh = Date.now();
 
 function refreshContent() {
-  if (refreshInProgress) return;
+  // Don't refresh if already refreshing or less than 30 seconds since last refresh
+  if (refreshInProgress || (Date.now() - lastRefresh < 30000)) {
+    return;
+  }
   
   refreshInProgress = true;
   
-  // Fetch new data in the background
   fetch(location.href, {
     headers: {
       'X-Requested-With': 'XMLHttpRequest'
@@ -762,98 +337,26 @@ function refreshContent() {
       return;
     }
     
-    const currentRows = document.querySelectorAll('tr[data-departure]');
-    const newRows = newRouteContainer.querySelectorAll('tr[data-departure]');
+    // Compare current and new content
+    const currentContent = document.getElementById('route-container').innerHTML;
+    const newContent = newRouteContainer.innerHTML;
     
-    // Build map of new vehicle data by plate number
-    const newVehicleData = new Map();
-    newRows.forEach(row => {
-      const plate = row.dataset.plate;
-      if (plate) {
-        newVehicleData.set(plate, {
-          departure: row.dataset.departure,
-          hasDeparted: row.dataset.hasDeparted === 'true',
-          entryTime: row.querySelector('.entry-time')?.innerHTML,
-          driver: row.querySelector('.driver-info')?.innerHTML,
-          departureTimeDisplay: row.querySelector('.departure-time-display')?.outerHTML,
-          entireRow: row.outerHTML
-        });
-      }
-    });
-    
-    const currentPlates = new Set();
-    
-    // Update existing rows WITHOUT interrupting countdown
-    currentRows.forEach(row => {
-      const plate = row.dataset.plate;
-      if (plate) {
-        currentPlates.add(plate);
-        
-        if (newVehicleData.has(plate)) {
-          const newData = newVehicleData.get(plate);
-          
-          // CRITICAL: Only update if departure time actually changed
-          const oldDeparture = row.dataset.departure;
-          const newDeparture = newData.departure;
-          
-          if (oldDeparture !== newDeparture) {
-            row.dataset.departure = newDeparture;
-          }
-          
-          // Update departure status if changed
-          const oldHasDeparted = row.dataset.hasDeparted === 'true';
-          const newHasDeparted = newData.hasDeparted;
-          
-          if (!oldHasDeparted && newHasDeparted) {
-            // Vehicle just departed - update display
-            row.dataset.hasDeparted = 'true';
-            
-            const badge = row.querySelector('.status-badge');
-            if (badge) {
-              badge.className = 'status-badge status-departed';
-              badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span class="countdown-text">DEPARTED</span>';
-            }
-            
-            const progressBar = row.querySelector('.progress-bar');
-            if (progressBar) {
-              progressBar.style.width = "100%";
-              progressBar.style.background = "linear-gradient(90deg, var(--dark-blue), var(--dark-blue-hover))";
-              progressBar.classList.add("glow");
-            }
-            
-            const departureDisplayContainer = row.querySelector('.countdown-container');
-            if (departureDisplayContainer && newData.departureTimeDisplay) {
-              const oldDisplay = departureDisplayContainer.querySelector('.departure-time-display');
-              if (oldDisplay) {
-                oldDisplay.outerHTML = newData.departureTimeDisplay;
-              }
-            }
-          }
-        }
-      }
-    });
-    
-    // Check for structural changes (new or removed vehicles)
-    const newPlates = new Set(newVehicleData.keys());
-    const vehiclesAdded = [...newPlates].some(p => !currentPlates.has(p));
-    const vehiclesRemoved = [...currentPlates].some(p => !newPlates.has(p));
-    
-    if (vehiclesAdded || vehiclesRemoved) {
-      // Smooth transition for major changes
+    // Only update if content actually changed
+    if (currentContent !== newContent) {
+      // Smooth transition
       const routeContainer = document.getElementById('route-container');
+      routeContainer.style.opacity = '0.7';
       routeContainer.style.transition = 'opacity 0.3s ease';
-      routeContainer.style.opacity = '0.5';
       
       setTimeout(() => {
-        routeContainer.innerHTML = newRouteContainer.innerHTML;
+        routeContainer.innerHTML = newContent;
         routeContainer.style.opacity = '1';
-        
-        // Immediately start countdown for new vehicles
-        updateCountdowns();
+        lastRefresh = Date.now();
+        refreshInProgress = false;
       }, 300);
+    } else {
+      refreshInProgress = false;
     }
-    
-    refreshInProgress = false;
   })
   .catch(error => {
     console.error('Refresh failed:', error);
@@ -879,24 +382,40 @@ fullscreenBtn.onclick = () => {
    INITIALIZE ON PAGE LOAD
 =================================================== */
 document.addEventListener('DOMContentLoaded', () => {
-  // Start clock
+  // Start clock with smooth updates
   updateDateTime();
   setInterval(updateDateTime, 1000);
   
-  // Start countdown updates (every second for smooth real-time display)
-  updateCountdowns();
-  setInterval(updateCountdowns, 1000);
+  // Start countdown with smooth real-time animation
+  updateAllCountdowns(); // Uses requestAnimationFrame for smooth updates
   
   // Background refresh every 30 seconds
   setInterval(refreshContent, 30000);
   
-  // Smooth page load animation
+  // Smooth page load
   document.body.style.opacity = '0';
   document.body.style.transition = 'opacity 0.5s ease';
   setTimeout(() => {
     document.body.style.opacity = '1';
   }, 100);
 });
+
+/* ===================================================
+   ADD CSS FOR PULSE ANIMATION
+=================================================== */
+const style = document.createElement('style');
+style.textContent = `
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.pulse {
+  animation: pulse 1s infinite;
+}
+`;
+document.head.appendChild(style);
 </script>
 
 </body>
