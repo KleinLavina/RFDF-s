@@ -25,8 +25,8 @@
        YOUR CSS
   ================================ -->
   <link rel="stylesheet" href="{% static 'styles/passenger/03.css' %}">
-
 </head>
+
 <body>
 
 <!-- SHARED HEADER -->
@@ -80,13 +80,22 @@
             <th>Countdown</th>
           </tr>
         </thead>
+
         <tbody>
           {% for q in queue_entries %}
           <tr class="{% if not q.is_active %}departed-row{% endif %}">
             <td><strong>{{ forloop.counter }}</strong></td>
+
             <td>{{ q.vehicle.license_plate }}</td>
-            <td><span class="route-badge">{{ q.route }}</span></td>
-            <td>{{ q.driver.first_name }} {{ q.driver.last_name }}</td>
+
+            <td>
+              <span class="route-badge">{{ q.route }}</span>
+            </td>
+
+            <td>
+              {{ q.driver.first_name }} {{ q.driver.last_name }}
+            </td>
+
             <td>
               {% if q.is_active %}
                 <span class="status active">Boarding</span>
@@ -94,9 +103,17 @@
                 <span class="status departed">Departed</span>
               {% endif %}
             </td>
-            <td>{{ q.departure_time|date:"M d, Y h:i A" }}</td>
 
-            <!-- ✅ REAL-TIME COUNTDOWN CELL -->
+            <!-- ✅ FIXED DEPARTURE COLUMN -->
+            <td>
+              {% if q.departed_at %}
+                {{ q.departed_at|date:"M d, Y h:i A" }}
+              {% else %}
+                {{ q.expiry_time|date:"M d, Y h:i A" }}
+              {% endif %}
+            </td>
+
+            <!-- ✅ REAL-TIME COUNTDOWN -->
             <td>
               {% if q.is_expired %}
                 <span class="badge bg-danger">Time Expired</span>
@@ -132,7 +149,6 @@
 
 <!-- ===============================
      REAL-TIME COUNTDOWN SCRIPT
-     (NO REFRESH, NO FREEZE)
 ================================ -->
 <script>
 (function () {
