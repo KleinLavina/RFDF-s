@@ -471,7 +471,7 @@
 
 <body>
 
-<!-- HEADER - KEEP AS IS -->
+<!-- HEADER -->
 <div class="tv-header">
   <h2><i class="fa-solid fa-tv me-2"></i> Terminal Queue Board</h2>
 
@@ -500,7 +500,7 @@
 <!-- ROUTE CONTAINER -->
 <div class="container-fluid px-5">
 
-  <!-- CONTAINER HEADER - KEEP AS IS -->
+  <!-- CONTAINER HEADER -->
   <div class="container-header">
     <div class="container-title">
       <i class="fa-solid fa-diagram-project me-2"></i>
@@ -553,7 +553,8 @@
             <tbody>
               {% for v in vehicles %}
               <tr data-departure="{{ v.departure_timestamp }}" 
-                  data-has-departed="{{ v.has_departed|yesno:'true,false' }}">
+                  data-has-departed="{{ v.has_departed|yesno:'true,false' }}"
+                  data-plate="{{ v.plate }}">
                 <td>
                   <span class="entry-time">
                     <i class="fa-solid fa-calendar-check me-1"></i>{{ v.entry_time }}
@@ -627,7 +628,9 @@
 </div>
 
 <script>
-/* CLOCK */
+/* ===================================================
+   CLOCK UPDATE
+=================================================== */
 function updateDateTime() {
   const now = new Date();
   
@@ -651,13 +654,17 @@ function updateDateTime() {
     now.toLocaleTimeString('en-US', timeOptions);
 }
 
-/* ROUTE FILTER */
+/* ===================================================
+   ROUTE FILTER
+=================================================== */
 function filterRoute(slug){
   const base = window.location.origin + "{% url 'terminal:tv_display' %}";
   window.location.href = slug ? base + slug + "/" : base;
 }
 
-/* COUNTDOWN LOGIC - UPDATED */
+/* ===================================================
+   COUNTDOWN LOGIC - FIXED FOR REAL-TIME
+=================================================== */
 function updateCountdowns(){
   const now = Date.now();
   const departureLimit = {{ stay_duration }} * 60 * 1000; // Convert minutes to milliseconds
@@ -671,9 +678,15 @@ function updateCountdowns(){
     }
     
     const departureTime = new Date(row.dataset.departure).getTime();
+    
+    // CRITICAL FIX: Check if departure time is valid
+    if (isNaN(departureTime)) {
+      console.error('Invalid departure time:', row.dataset.departure);
+      return;
+    }
+    
     const timeDiff = departureTime - now;
     const progressBar = row.querySelector(".progress-bar");
-    const countdownText = badge.querySelector(".countdown-text");
     
     if (timeDiff <= 0) {
       // TIME EXPIRED (but vehicle hasn't physically departed yet)
@@ -693,11 +706,11 @@ function updateCountdowns(){
       const secsStr = seconds.toString().padStart(2, '0');
       
       badge.className = "status-badge status-countdown";
-      badge.innerHTML = `<i class="fa-solid fa-stopwatch"></i> <span class="countdown-text">${minsStr}:${secsStr}</span>`;
+      badge.innerHTML = `<i class="fa-solid fa-stopwatch"></i> <span class="countdown-text countdown-timer">${minsStr}:${secsStr}</span>`;
       
       // Progress calculation
       const progressPercent = 100 - (timeDiff / departureLimit) * 100;
-      progressBar.style.width = `${progressPercent}%`;
+      progressBar.style.width = `${Math.min(100, Math.max(0, progressPercent))}%`;
       
       // Color gradient based on urgency
       if (progressPercent > 75) {
@@ -722,7 +735,9 @@ function updateCountdowns(){
   });
 }
 
-/* AUTO REFRESH - IMPROVED WITHOUT VISUAL FREEZE */
+/* ===================================================
+   AUTO REFRESH - OPTIMIZED FOR SMOOTH COUNTDOWN
+=================================================== */
 let refreshInProgress = false;
 
 function refreshContent() {
@@ -730,7 +745,7 @@ function refreshContent() {
   
   refreshInProgress = true;
   
-  // Fetch new data WITHOUT replacing DOM (keep countdown running smoothly)
+  // Fetch new data in the background
   fetch(location.href, {
     headers: {
       'X-Requested-With': 'XMLHttpRequest'
@@ -747,41 +762,57 @@ function refreshContent() {
       return;
     }
     
-    // Extract vehicle data from new HTML without replacing DOM
     const currentRows = document.querySelectorAll('tr[data-departure]');
     const newRows = newRouteContainer.querySelectorAll('tr[data-departure]');
     
-    // Build map of new vehicle data
+    // Build map of new vehicle data by plate number
     const newVehicleData = new Map();
     newRows.forEach(row => {
-      const plate = row.querySelector('.vehicle-plate')?.textContent.trim();
+      const plate = row.dataset.plate;
       if (plate) {
         newVehicleData.set(plate, {
           departure: row.dataset.departure,
           hasDeparted: row.dataset.hasDeparted === 'true',
-          entryTime: row.querySelector('.entry-time')?.textContent.trim(),
-          driver: row.querySelector('.driver-info')?.textContent.trim(),
-          departureTimeDisplay: row.querySelector('.departure-time-display')?.textContent.trim()
+          entryTime: row.querySelector('.entry-time')?.innerHTML,
+          driver: row.querySelector('.driver-info')?.innerHTML,
+          departureTimeDisplay: row.querySelector('.departure-time-display')?.outerHTML,
+          entireRow: row.outerHTML
         });
       }
     });
     
-    // Update existing rows data attributes WITHOUT replacing DOM
+    const currentPlates = new Set();
+    
+    // Update existing rows WITHOUT interrupting countdown
     currentRows.forEach(row => {
-      const plate = row.querySelector('.vehicle-plate')?.textContent.trim();
-      if (plate && newVehicleData.has(plate)) {
-        const newData = newVehicleData.get(plate);
+      const plate = row.dataset.plate;
+      if (plate) {
+        currentPlates.add(plate);
         
-        // Update data attributes for countdown calculation
-        row.dataset.departure = newData.departure;
-        row.dataset.hasDeparted = newData.hasDeparted ? 'true' : 'false';
-        
-        // If vehicle departed, update the display immediately
-        if (newData.hasDeparted) {
-          const badge = row.querySelector('.status-badge');
-          if (badge && !badge.classList.contains('status-departed')) {
-            badge.className = 'status-badge status-departed';
-            badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span class="countdown-text">DEPARTED</span>';
+        if (newVehicleData.has(plate)) {
+          const newData = newVehicleData.get(plate);
+          
+          // CRITICAL: Only update if departure time actually changed
+          const oldDeparture = row.dataset.departure;
+          const newDeparture = newData.departure;
+          
+          if (oldDeparture !== newDeparture) {
+            row.dataset.departure = newDeparture;
+          }
+          
+          // Update departure status if changed
+          const oldHasDeparted = row.dataset.hasDeparted === 'true';
+          const newHasDeparted = newData.hasDeparted;
+          
+          if (!oldHasDeparted && newHasDeparted) {
+            // Vehicle just departed - update display
+            row.dataset.hasDeparted = 'true';
+            
+            const badge = row.querySelector('.status-badge');
+            if (badge) {
+              badge.className = 'status-badge status-departed';
+              badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span class="countdown-text">DEPARTED</span>';
+            }
             
             const progressBar = row.querySelector('.progress-bar');
             if (progressBar) {
@@ -790,36 +821,35 @@ function refreshContent() {
               progressBar.classList.add("glow");
             }
             
-            const departureDisplay = row.querySelector('.departure-time-display');
-            if (departureDisplay) {
-              departureDisplay.classList.add('departed');
-              departureDisplay.innerHTML = '<i class="fa-solid fa-calendar-xmark me-1"></i>' + newData.departureTimeDisplay;
+            const departureDisplayContainer = row.querySelector('.countdown-container');
+            if (departureDisplayContainer && newData.departureTimeDisplay) {
+              const oldDisplay = departureDisplayContainer.querySelector('.departure-time-display');
+              if (oldDisplay) {
+                oldDisplay.outerHTML = newData.departureTimeDisplay;
+              }
             }
           }
         }
       }
     });
     
-    // Check for NEW vehicles or REMOVED vehicles (major changes require full refresh)
-    const currentPlates = new Set(Array.from(currentRows).map(r => 
-      r.querySelector('.vehicle-plate')?.textContent.trim()
-    ).filter(Boolean));
-    
+    // Check for structural changes (new or removed vehicles)
     const newPlates = new Set(newVehicleData.keys());
+    const vehiclesAdded = [...newPlates].some(p => !currentPlates.has(p));
+    const vehiclesRemoved = [...currentPlates].some(p => !newPlates.has(p));
     
-    // If vehicles added or removed, do a smooth full refresh
-    const vehiclesChanged = currentPlates.size !== newPlates.size || 
-                           ![...currentPlates].every(p => newPlates.has(p));
-    
-    if (vehiclesChanged) {
+    if (vehiclesAdded || vehiclesRemoved) {
+      // Smooth transition for major changes
       const routeContainer = document.getElementById('route-container');
       routeContainer.style.transition = 'opacity 0.3s ease';
-      routeContainer.style.opacity = '0.7';
+      routeContainer.style.opacity = '0.5';
       
       setTimeout(() => {
         routeContainer.innerHTML = newRouteContainer.innerHTML;
         routeContainer.style.opacity = '1';
-        updateCountdowns(); // Restart countdown for new vehicles
+        
+        // Immediately start countdown for new vehicles
+        updateCountdowns();
       }, 300);
     }
     
@@ -831,7 +861,9 @@ function refreshContent() {
   });
 }
 
-/* FULLSCREEN */
+/* ===================================================
+   FULLSCREEN TOGGLE
+=================================================== */
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 fullscreenBtn.onclick = () => {
   if (!document.fullscreenElement) {
@@ -843,16 +875,22 @@ fullscreenBtn.onclick = () => {
   }
 };
 
-/* INITIALIZE */
+/* ===================================================
+   INITIALIZE ON PAGE LOAD
+=================================================== */
 document.addEventListener('DOMContentLoaded', () => {
+  // Start clock
   updateDateTime();
   setInterval(updateDateTime, 1000);
   
+  // Start countdown updates (every second for smooth real-time display)
   updateCountdowns();
   setInterval(updateCountdowns, 1000);
   
+  // Background refresh every 30 seconds
   setInterval(refreshContent, 30000);
   
+  // Smooth page load animation
   document.body.style.opacity = '0';
   document.body.style.transition = 'opacity 0.5s ease';
   setTimeout(() => {

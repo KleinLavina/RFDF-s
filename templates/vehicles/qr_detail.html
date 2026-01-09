@@ -5,46 +5,46 @@
 {% block content %}
 <style>
 /* =====================================================
-   RDFS – VEHICLE QR (FRONT & BACK ID CARD)
+   UNIQUE VEHICLE QR NAMESPACE
 ===================================================== */
 :root{
-  --rdfs-blue:#112666;
-  --rdfs-blue-dark:#0c1c4a;
-  --rdfs-bg:#f7fafc;
-  --rdfs-card:#ffffff;
-  --rdfs-text:#0f172a;
-  --rdfs-muted:#64748b;
-  --rdfs-border:#e2e8f0;
-  --rdfs-radius:16px;
-  --rdfs-shadow-sm:0 4px 10px rgba(15,23,42,.08);
-  --rdfs-shadow-md:0 14px 32px rgba(15,23,42,.14);
+  --_qr_id_blue:#112666;
+  --_qr_id_blue-dark:#0c1c4a;
+  --_qr_id_bg:#f7fafc;
+  --_qr_id_card:#ffffff;
+  --_qr_id_text:#0f172a;
+  --_qr_id_muted:#64748b;
+  --_qr_id_border:#e2e8f0;
+  --_qr_id_radius:16px;
+  --_qr_id_shadow-sm:0 4px 10px rgba(15,23,42,.08);
+  --_qr_id_shadow-md:0 14px 32px rgba(15,23,42,.14);
 }
 
 /* PAGE */
-.rdfs-vehicle-qr-page{
+._qr_id_page{
   min-height:80vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:var(--rdfs-bg);
+  background:var(--_qr_id_bg);
   font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
   padding:2rem 0;
 }
 
 /* CARD CONTAINER */
-.rdfs-vehicle-qr-card{
+._qr_id_card-container{
   position:relative;
   max-width:900px;
   width:100%;
-  background:var(--rdfs-card);
-  border-radius:var(--rdfs-radius);
+  background:var(--_qr_id_card);
+  border-radius:var(--_qr_id_radius);
   padding:2rem;
-  border:1px solid var(--rdfs-border);
-  box-shadow:var(--rdfs-shadow-md);
+  border:1px solid var(--_qr_id_border);
+  box-shadow:var(--_qr_id_shadow-md);
 }
 
 /* BACK BUTTON */
-.rdfs-vehicle-qr-cancel{
+._qr_id_back-btn{
   position:absolute;
   top:1rem;
   right:1rem;
@@ -54,18 +54,18 @@
 }
 
 /* TITLES */
-.rdfs-vehicle-qr-title{
+._qr_id_title{
   font-weight:800;
-  color:var(--rdfs-blue-dark);
+  color:var(--_qr_id_blue-dark);
 }
-.rdfs-vehicle-qr-sub{
+._qr_id_subtitle{
   font-size:.85rem;
-  color:var(--rdfs-muted);
+  color:var(--_qr_id_muted);
   margin-bottom:1.6rem;
 }
 
 /* CARD WRAPPER - SIDE BY SIDE */
-.rdfs-cards-wrapper{
+._qr_id_cards-wrapper{
   display:flex;
   gap:2rem;
   justify-content:center;
@@ -73,41 +73,39 @@
 }
 
 /* INDIVIDUAL CARD */
-.rdfs-id-card{
+._qr_id_single-card{
   width:420px;
   height:270px;
   padding:0.8rem 1rem;
-  border:2px solid var(--rdfs-border);
+  border:2px solid var(--_qr_id_border);
   border-radius:10px;
   background:linear-gradient(135deg, #64b5f6 0%, #ffffff 100%);
-  box-shadow:var(--rdfs-shadow-sm);
+  box-shadow:var(--_qr_id_shadow-sm);
   display:flex;
   flex-direction:column;
   overflow:hidden;
   box-sizing:border-box;
 }
 
-
-
 /* HEADER - Logo and Date */
-.rdfs-card-header{
+._qr_id_card-header{
   display:flex;
   justify-content:space-between;
   align-items:center;
   margin-bottom:0.6rem;
   padding-bottom:0.4rem;
-  border-bottom:1px solid var(--rdfs-border);
+  border-bottom:1px solid var(--_qr_id_border);
   flex-shrink:0;
 }
 
-.rdfs-card-logo{
+._qr_id_logo{
   height:30px;
   width:auto;
   object-fit:contain;
 }
 
-.rdfs-card-date{
-  color:var(--rdfs-muted);
+._qr_id_date{
+  color:var(--_qr_id_muted);
   font-size:0.6rem;
   display:flex;
   align-items:center;
@@ -115,48 +113,48 @@
   white-space:nowrap;
 }
 
-.rdfs-card-date i{
+._qr_id_date i{
   font-size:0.6rem;
 }
 
 /* =============== FRONT CARD =============== */
-.rdfs-front-content{
+._qr_id_front-content{
   flex:1;
   display:flex;
   gap:1rem;
   align-items:center;
 }
 
-.rdfs-driver-photo{
+._qr_id_driver-photo{
   width:110px;
   height:140px;
   object-fit:cover;
   border-radius:8px;
-  border:2px solid var(--rdfs-blue);
-  box-shadow:var(--rdfs-shadow-sm);
+  border:2px solid var(--_qr_id_blue);
+  box-shadow:var(--_qr_id_shadow-sm);
   flex-shrink:0;
 }
 
-.rdfs-driver-photo-placeholder{
+._qr_id_photo-placeholder{
   width:110px;
   height:140px;
   background:#e2e8f0;
   border-radius:8px;
-  border:2px solid var(--rdfs-border);
+  border:2px solid var(--_qr_id_border);
   display:flex;
   align-items:center;
   justify-content:center;
   flex-shrink:0;
 }
 
-.rdfs-front-details{
+._qr_id_front-details{
   flex:1;
   display:flex;
   flex-direction:column;
   gap:0.6rem;
 }
 
-.rdfs-detail-item{
+._qr_id_detail-item{
   display:flex;
   align-items:flex-start;
   gap:0.5rem;
@@ -164,22 +162,22 @@
   line-height:1.3;
 }
 
-.rdfs-detail-item i{
+._qr_id_detail-item i{
   width:16px;
   text-align:center;
-  color:var(--rdfs-blue);
+  color:var(--_qr_id_blue);
   font-size:0.85rem;
   margin-top:1px;
   flex-shrink:0;
 }
 
-.rdfs-detail-item .rdfs-detail-content{
+._qr_id_detail-item ._qr_id_detail-content{
   flex:1;
 }
 
-.rdfs-detail-item strong{
+._qr_id_detail-item strong{
   display:block;
-  color:var(--rdfs-muted);
+  color:var(--_qr_id_muted);
   font-weight:600;
   font-size:0.65rem;
   text-transform:uppercase;
@@ -187,15 +185,15 @@
   letter-spacing:0.3px;
 }
 
-.rdfs-detail-item span{
-  color:var(--rdfs-text);
+._qr_id_detail-item span{
+  color:var(--_qr_id_text);
   font-weight:500;
   font-size:0.75rem;
   line-height:1.4;
 }
 
 /* =============== BACK CARD =============== */
-.rdfs-back-content{
+._qr_id_back-content{
   flex:1;
   display:flex;
   flex-direction:column;
@@ -204,36 +202,41 @@
   gap:0.8rem;
 }
 
-.rdfs-qr-label{
+._qr_id_qr-label{
   font-size:0.7rem;
-  color:var(--rdfs-muted);
+  color:var(--_qr_id_muted);
   font-weight:600;
   text-transform:uppercase;
   letter-spacing:0.5px;
 }
 
-.rdfs-vehicle-qr-image{
+._qr_id_qr-image{
   width:180px;
   height:180px;
   object-fit:contain;
-  border:2px solid var(--rdfs-blue);
+  border:2px solid var(--_qr_id_blue);
   border-radius:8px;
   padding:0.3rem;
   background:#fff;
-  box-shadow:var(--rdfs-shadow-sm);
+  box-shadow:var(--_qr_id_shadow-sm);
 }
 
-.rdfs-qr-instruction{
+._qr_id_instruction{
   font-size:0.65rem;
-  color:var(--rdfs-muted);
+  color:var(--_qr_id_muted);
   text-align:center;
   max-width:200px;
   line-height:1.4;
 }
 
 /* ACTIONS */
-.rdfs-vehicle-qr-actions{
+._qr_id_actions{
   margin-top:1.8rem;
+}
+
+/* HIDE ELEMENTS */
+._qr_id_hidden{
+  display:none !important;
 }
 
 /* =====================================================
@@ -252,7 +255,7 @@
   }
 
   nav, header, footer, .sidebar,
-  .rdfs-vehicle-qr-hide {
+  ._qr_id_hidden {
     display:none !important;
   }
 
@@ -260,12 +263,12 @@
     visibility:hidden !important;
   }
 
-  .rdfs-vehicle-qr-print,
-  .rdfs-vehicle-qr-print * {
+  ._qr_id_printable,
+  ._qr_id_printable * {
     visibility:visible !important;
   }
 
-  .rdfs-vehicle-qr-print {
+  ._qr_id_printable {
     position:fixed;
     inset:0;
     display:flex;
@@ -274,11 +277,11 @@
     background:#ffffff !important;
   }
 
-  .rdfs-cards-wrapper{
+  ._qr_id_cards-wrapper{
     gap:1.5rem;
   }
 
-  .rdfs-id-card{
+  ._qr_id_single-card{
     border:2px solid #000 !important;
     box-shadow:none !important;
     page-break-inside:avoid;
@@ -287,36 +290,36 @@
     print-color-adjust:exact !important;
   }
   
-  .rdfs-driver-photo{
+  ._qr_id_driver-photo{
     border-color:#000 !important;
     box-shadow:none !important;
   }
   
-  .rdfs-vehicle-qr-image{
+  ._qr_id_qr-image{
     border-color:#000 !important;
     box-shadow:none !important;
   }
 
-  .rdfs-card-label{
+  ._qr_id_label{
     font-weight:700;
   }
 }
 
 /* RESPONSIVE */
 @media (max-width: 992px) {
-  .rdfs-cards-wrapper{
+  ._qr_id_cards-wrapper{
     flex-direction:column;
     align-items:center;
   }
 }
 
 @media (max-width: 576px) {
-  .rdfs-id-card{
+  ._qr_id_single-card{
     width:100%;
     max-width:420px;
   }
 
-  .rdfs-card-header{
+  ._qr_id_card-header{
     flex-direction:column;
     align-items:flex-start;
     gap:0.5rem;
@@ -325,80 +328,80 @@
 </style>
 
 <!-- PAGE -->
-<div class="container rdfs-vehicle-qr-page">
+<div class="container _qr_id_page">
 
-  <div class="rdfs-vehicle-qr-card">
+  <div class="_qr_id_card-container">
 
     <!-- BACK -->
     <a href="{% url 'vehicles:registered_vehicles' %}"
-       class="btn btn-outline-secondary btn-sm rdfs-vehicle-qr-cancel rdfs-vehicle-qr-hide">
+       class="btn btn-outline-secondary btn-sm _qr_id_back-btn _qr_id_hidden">
       <i class="bi bi-x-circle-fill me-1"></i>
       Back
     </a>
 
     <!-- TITLE -->
-    <h3 class="rdfs-vehicle-qr-title text-center">
+    <h3 class="_qr_id_title text-center">
       Vehicle QR Code
     </h3>
-    <p class="rdfs-vehicle-qr-sub text-center">
+    <p class="_qr_id_subtitle text-center">
       {{ vehicle.vehicle_name }} — {{ vehicle.license_plate }}
     </p>
 
     <!-- PRINTABLE - FRONT & BACK -->
-    <div class="rdfs-vehicle-qr-print">
-      <div class="rdfs-cards-wrapper">
+    <div class="_qr_id_printable">
+      <div class="_qr_id_cards-wrapper">
 
         <!-- ============ FRONT CARD ============ -->
-        <div class="rdfs-id-card">
+        <div class="_qr_id_single-card">
 
           <!-- HEADER -->
-          <div class="rdfs-card-header">
+          <div class="_qr_id_card-header">
             <img
               src="{% static 'img/RDFS-Logo.png' %}"
               alt="RDFS Logo"
-              class="rdfs-card-logo">
-            <div class="rdfs-card-date">
+              class="_qr_id_logo">
+            <div class="_qr_id_date">
               <i class="fas fa-calendar-alt"></i>
               <span>{{ vehicle.date_registered|date:"M d, Y" }}</span>
             </div>
           </div>
 
           <!-- CONTENT -->
-          <div class="rdfs-front-content">
+          <div class="_qr_id_front-content">
             
             <!-- PHOTO -->
             {% if vehicle.assigned_driver.driver_photo %}
               <img src="{{ vehicle.assigned_driver.driver_photo.url }}"
-                   class="rdfs-driver-photo"
+                   class="_qr_id_driver-photo"
                    alt="Driver Photo">
             {% else %}
-              <div class="rdfs-driver-photo-placeholder">
+              <div class="_qr_id_photo-placeholder">
                 <i class="fas fa-user" style="font-size:3rem; color:#64748b;"></i>
               </div>
             {% endif %}
 
             <!-- DETAILS -->
-            <div class="rdfs-front-details">
+            <div class="_qr_id_front-details">
               
-              <div class="rdfs-detail-item">
+              <div class="_qr_id_detail-item">
                 <i class="fas fa-user"></i>
-                <div class="rdfs-detail-content">
+                <div class="_qr_id_detail-content">
                   <strong>Driver Name</strong>
                   <span>{{ vehicle.assigned_driver.first_name }} {{ vehicle.assigned_driver.middle_name|default:"" }} {{ vehicle.assigned_driver.last_name }}{% if vehicle.assigned_driver.suffix %} {{ vehicle.assigned_driver.suffix }}{% endif %}</span>
                 </div>
               </div>
 
-              <div class="rdfs-detail-item">
+              <div class="_qr_id_detail-item">
                 <i class="fas fa-id-card"></i>
-                <div class="rdfs-detail-content">
+                <div class="_qr_id_detail-content">
                   <strong>Plate Number</strong>
                   <span>{{ vehicle.license_plate }}</span>
                 </div>
               </div>
 
-              <div class="rdfs-detail-item">
+              <div class="_qr_id_detail-item">
                 <i class="fas fa-map-marker-alt"></i>
-                <div class="rdfs-detail-content">
+                <div class="_qr_id_detail-content">
                   <strong>Address</strong>
                   <span>
                     {% if vehicle.assigned_driver.house_number %}{{ vehicle.assigned_driver.house_number }} {% endif %}
@@ -411,9 +414,9 @@
                 </div>
               </div>
 
-              <div class="rdfs-detail-item">
+              <div class="_qr_id_detail-item">
                 <i class="fas fa-phone"></i>
-                <div class="rdfs-detail-content">
+                <div class="_qr_id_detail-content">
                   <strong>Contact Number</strong>
                   <span>{{ vehicle.assigned_driver.mobile_number|default:"N/A" }}</span>
                 </div>
@@ -425,21 +428,21 @@
         </div>
 
         <!-- ============ BACK CARD ============ -->
-        <div class="rdfs-id-card">
+        <div class="_qr_id_single-card">
 
           <!-- CONTENT -->
-          <div class="rdfs-back-content">
-            <span class="rdfs-qr-label">Scan QR Code</span>
+          <div class="_qr_id_back-content">
+            <span class="_qr_id_qr-label">Scan QR Code</span>
             
             {% if vehicle.qr_code %}
               <img src="{{ vehicle.qr_code.url }}"
-                   class="rdfs-vehicle-qr-image"
+                   class="_qr_id_qr-image"
                    alt="QR Code">
             {% else %}
               <div class="text-muted small">No QR available</div>
             {% endif %}
 
-            <p class="rdfs-qr-instruction">
+            <p class="_qr_id_instruction">
               Scan this code for vehicle verification and driver information
             </p>
           </div>
@@ -449,7 +452,7 @@
     </div>
 
     <!-- ACTION -->
-    <div class="text-center rdfs-vehicle-qr-actions rdfs-vehicle-qr-hide">
+    <div class="text-center _qr_id_actions _qr_id_hidden">
       <button onclick="window.print()"
               class="btn btn-primary rounded-pill px-4">
         <i class="bi bi-printer-fill me-1"></i>
