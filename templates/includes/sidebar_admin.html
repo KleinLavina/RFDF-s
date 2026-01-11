@@ -22,73 +22,124 @@
         </a>
       </li>
 
-      <!-- USERS -->
-      <li class="rdfs-adm-sb__section">Users</li>
-
-      <li class="rdfs-adm-sb__item">
-        <a href="{% url 'accounts:manage_users' %}" class="rdfs-adm-sb__link">
-          <i class="bi bi-person-badge-fill"></i>
-          <span>Accounts</span>
-        </a>
+      <li class="rdfs-adm-sb__group">
+        <button class="rdfs-adm-sb__group-toggle" type="button" aria-expanded="false" data-group="admin-manage-drivers">
+          <span>
+            <i class="bi bi-people-fill"></i>
+            <span>Manage Drivers</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-adm-sb__group-chevron"></i>
+        </button>
+        <ul class="rdfs-adm-sb__group-list" aria-hidden="true">
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'vehicles:registered_drivers' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-people-fill"></i>
+              <span>Drivers</span>
+            </a>
+          </li>
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'vehicles:register_driver' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-person-plus-fill"></i>
+              <span>Add Driver</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
-      <li class="rdfs-adm-sb__item">
-        <a href="{% url 'vehicles:registered_drivers' %}" class="rdfs-adm-sb__link">
-          <i class="bi bi-people-fill"></i>
-          <span>Drivers</span>
-        </a>
+      <li class="rdfs-adm-sb__group">
+        <button class="rdfs-adm-sb__group-toggle" type="button" aria-expanded="false" data-group="admin-manage-vehicles">
+          <span>
+            <i class="bi bi-truck-front-fill"></i>
+            <span>Manage Vehicles</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-adm-sb__group-chevron"></i>
+        </button>
+        <ul class="rdfs-adm-sb__group-list" aria-hidden="true">
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'vehicles:registered_vehicles' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-truck-front-fill"></i>
+              <span>Vehicles</span>
+            </a>
+          </li>
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'vehicles:register_vehicle' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-truck-front-fill"></i>
+              <span>Add Vehicle</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
-      <li class="rdfs-adm-sb__item">
-        <a href="{% url 'vehicles:registered_vehicles' %}" class="rdfs-adm-sb__link">
-          <i class="bi bi-truck-front-fill"></i>
-          <span>Vehicles</span>
-        </a>
+      <li class="rdfs-adm-sb__group">
+        <button class="rdfs-adm-sb__group-toggle" type="button" aria-expanded="false" data-group="admin-transactions">
+          <span>
+            <i class="bi bi-wallet2"></i>
+            <span>Transactions</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-adm-sb__group-chevron"></i>
+        </button>
+        <ul class="rdfs-adm-sb__group-list" aria-hidden="true">
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'terminal:deposit_menu' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-cash-stack"></i>
+              <span>Deposits</span>
+            </a>
+          </li>
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'vehicles:queue_history' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-clock-history"></i>
+              <span>Queue History</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
-      <!-- TRANSACTIONS -->
-      <li class="rdfs-adm-sb__section">Transactions</li>
-
-      <li class="rdfs-adm-sb__item">
-        <a href="{% url 'terminal:deposit_menu' %}" class="rdfs-adm-sb__link">
-          <i class="bi bi-cash-stack"></i>
-          <span>Deposits</span>
-        </a>
+      <li class="rdfs-adm-sb__group">
+        <button class="rdfs-adm-sb__group-toggle" type="button" aria-expanded="false" data-group="admin-reports">
+          <span>
+            <i class="bi bi-bar-chart-line"></i>
+            <span>Reports</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-adm-sb__group-chevron"></i>
+        </button>
+        <ul class="rdfs-adm-sb__group-list" aria-hidden="true">
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'reports:reports_home' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-graph-up"></i>
+              <span>Reports Dashboard</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
-      <li class="rdfs-adm-sb__item">
-        <a href="{% url 'vehicles:queue_history' %}" class="rdfs-adm-sb__link">
-          <i class="bi bi-clock-history"></i>
-          <span>Queue History</span>
-        </a>
-      </li>
-
-      <!-- REPORTS -->
-      <li class="rdfs-adm-sb__section">Reports</li>
-
-      <li class="rdfs-adm-sb__item">
-        <a href="{% url 'reports:reports_home' %}" class="rdfs-adm-sb__link">
-          <i class="bi bi-graph-up"></i>
-          <span>Reports Dashboard</span>
-        </a>
-      </li>
-
-
-      <!-- SYSTEM -->
-      <li class="rdfs-adm-sb__section">System</li>
-
-      <li class="rdfs-adm-sb__item">
-        <a href="{% url 'terminal:system_settings' %}" class="rdfs-adm-sb__link">
-          <i class="bi bi-sliders2"></i>
-          <span>Settings</span>
-        </a>
-      </li>
-
-      <li class="rdfs-adm-sb__item">
-        <a href="{% url 'terminal:manage_routes' %}" class="rdfs-adm-sb__link">
-          <i class="bi bi-map-fill"></i>
-          <span>Routes</span>
-        </a>
+      <li class="rdfs-adm-sb__group">
+        <button class="rdfs-adm-sb__group-toggle" type="button" aria-expanded="false" data-group="admin-settings">
+          <span>
+            <i class="bi bi-sliders2"></i>
+            <span>Settings</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-adm-sb__group-chevron"></i>
+        </button>
+        <ul class="rdfs-adm-sb__group-list" aria-hidden="true">
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'accounts:manage_users' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-person-badge-fill"></i>
+          <span>Accounts Access</span>
+            </a>
+          </li>
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'terminal:system_settings' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-sliders2"></i>
+              <span>System Settings</span>
+            </a>
+          </li>
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'terminal:manage_routes' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-map-fill"></i>
+              <span>Routes</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
     </ul>
@@ -166,6 +217,59 @@
   margin:0;
 }
 
+.rdfs-adm-sb__group {
+  margin-bottom: 4px;
+}
+
+.rdfs-adm-sb__group-toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 7px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--rdfs-adm-sb-text);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--rdfs-adm-sb-transition);
+}
+
+.rdfs-adm-sb__group-toggle span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rdfs-adm-sb__group-toggle:hover,
+.rdfs-adm-sb__group-toggle:focus-visible {
+  background: var(--rdfs-adm-sb-hover);
+}
+
+.rdfs-adm-sb__group-chevron {
+  transition: transform .25s ease;
+}
+
+.rdfs-adm-sb__group-toggle[aria-expanded="true"] .rdfs-adm-sb__group-chevron {
+  transform: rotate(180deg);
+}
+
+.rdfs-adm-sb__group-list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .25s ease;
+}
+
+.rdfs-adm-sb__group-list[aria-hidden="false"] {
+  max-height: 400px;
+}
+
 /* SECTION */
 .rdfs-adm-sb__section{
   margin:10px 8px 4px;
@@ -199,7 +303,8 @@
   min-width:18px;
 }
 
-.rdfs-adm-sb__link:hover{
+.rdfs-adm-sb__link:hover,
+.rdfs-adm-sb__link.active{
   background:var(--rdfs-adm-sb-hover);
   transform:translateX(2px);
 }

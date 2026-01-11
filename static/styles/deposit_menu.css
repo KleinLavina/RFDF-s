@@ -1,0 +1,131 @@
+.rdfs-deposit-scope{
+  --rdfs-blue:#112666;
+  --rdfs-blue-dark:#0c1c4a;
+  --rdfs-accent:#2563eb;
+  --rdfs-soft:#e8f4fd;
+
+  --shadow-md:0 8px 20px rgba(12,28,74,0.18);
+  --muted:#64748b;
+
+  font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+}
+
+.rdfs-deposit-container{
+  max-width:1250px;
+  margin:auto;
+}
+
+.rdfs-deposit-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+  margin-bottom:1.2rem;
+}
+
+.rdfs-deposit-title{
+  font-weight:700;
+  color:var(--rdfs-blue-dark);
+}
+
+.rdfs-deposit-note{
+  font-size:.95rem;
+  color:var(--muted);
+}
+
+.rdfs-deposit-back{
+  border-radius:999px;
+  font-weight:600;
+  background:#fff;
+  color:var(--rdfs-blue-dark);
+  border:1.5px solid var(--rdfs-blue);
+  white-space:nowrap;
+}
+
+.rdfs-deposit-back:hover{
+  background:var(--rdfs-soft);
+}
+
+.rdfs-deposit-card{
+  border-radius:14px;
+  box-shadow:var(--shadow-md);
+}
+
+.rdfs-deposit-header-dark{
+  background:linear-gradient(
+    180deg,
+    var(--rdfs-blue) 0%,
+    var(--rdfs-blue-dark) 100%
+  );
+  color:#ffffff;
+}
+
+.rdfs-deposit-table thead th{
+  background:#f1f5f9;
+  color:#0f172a;
+  font-weight:600;
+}
+
+.rdfs-deposit-today{
+  font-size:.9rem;
+}
+
+@keyframes rdfsDepositSpin{
+  from{transform:rotate(0deg);}
+  to{transform:rotate(360deg);}
+}
+.rdfs-deposit-spin{
+  animation:rdfsDepositSpin 1s linear infinite;
+}
+
+.rdfs-action-toast{
+  position:fixed;
+  top:1rem;
+  right:1rem;
+  background:#15803d;
+  color:#ffffff;
+  border-radius:999px;
+  padding:.75rem 1.25rem;
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  font-weight:600;
+  box-shadow:0 12px 30px rgba(5,102,73,.3);
+  opacity:0;
+  transform:translateY(15px);
+  transition:opacity .2s ease, transform .2s ease;
+  pointer-events:none;
+  z-index:1100;
+}
+
+.rdfs-action-toast.visible{
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto;
+}
+
+#rdfsVehicleSelect{
+  width:100%;
+  min-height:2.5rem;
+  max-height:250px;
+  overflow:auto;
+}
+
+.select2-container--default .select2-selection--single{
+  border-radius:8px;
+  border:1px solid #ced4da;
+  min-height:2.5rem;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered{
+  line-height:2.25rem;
+}
+
+.select2-selection__arrow{
+  height:2.5rem;
+}
+
+.rdfs-select2-dropdown{
+  max-height:280px;
+  overflow-y:auto;
+}

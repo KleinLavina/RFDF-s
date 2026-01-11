@@ -2,7 +2,7 @@ import re
 import uuid
 import qrcode
 from io import BytesIO
-from cloudinary.models import CloudinaryField
+
 from django.core.files import File
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -10,8 +10,9 @@ from django.db.models import F
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-import cloudinary.uploader
+
 from django.core.files.base import ContentFile
+from cloudinary.models import CloudinaryField
 
 
 # ======================================================
@@ -86,10 +87,12 @@ class Driver(models.Model):
     # DRIVER PHOTO (REQUIRED)
     # -----------------------------
     driver_photo = CloudinaryField(
-    'driver_photo',
-    blank=False,
-    null=False,
-)
+        'driver_photo',
+        max_length=255,
+        blank=False,
+        null=False,
+    )
+
 
 
 
@@ -128,7 +131,6 @@ class Driver(models.Model):
         return f"{self.first_name} {self.last_name} ({self.driver_id})"
 
 
-
 class Vehicle(models.Model):
     VEHICLE_TYPES = [
         ('jeepney', 'Jeepney'),
@@ -152,6 +154,7 @@ class Vehicle(models.Model):
     vehicle_name = models.CharField(max_length=100, default="Unnamed Vehicle")
     vehicle_type = models.CharField(max_length=50, choices=VEHICLE_TYPES)
     ownership_type = models.CharField(max_length=20, choices=OWNERSHIP_TYPES, default='owned')
+
     assigned_driver = models.ForeignKey(
         'Driver',
         on_delete=models.CASCADE,
@@ -177,11 +180,12 @@ class Vehicle(models.Model):
 
     seat_capacity = models.PositiveIntegerField(blank=True, null=True)
 
-    # ✅ Cloudinary QR field
+    # ✅ LOCAL QR IMAGE FIELD
     qr_code = CloudinaryField(
         'qr_code',
+        max_length=255,
         blank=True,
-        null=True
+        null=True,
     )
 
     qr_value = models.CharField(
@@ -227,7 +231,7 @@ class Vehicle(models.Model):
             raise ValidationError(errors)
 
     # --------------------------------------------------
-    # SAVE & CLOUDINARY QR GENERATION
+    # SAVE & LOCAL QR GENERATION
     # --------------------------------------------------
     def save(self, *args, **kwargs):
         creating = self.pk is None
@@ -238,28 +242,23 @@ class Vehicle(models.Model):
         if creating or self.qr_value != expected_qr_value:
             self.qr_value = expected_qr_value
 
-            # Generate QR image
             qr_img = qrcode.make(self.qr_value)
             buffer = BytesIO()
             qr_img.save(buffer, format="PNG")
-            buffer.seek(0)
 
-            # Upload to Cloudinary
-            upload = cloudinary.uploader.upload(
-                buffer,
-                folder="vehicle_qrcodes",
-                public_id=f"vehicle_{self.id}_qr",
-                overwrite=True,
-                resource_type="image"
+            file_name = f"vehicle_{self.id}_qr.png"
+            self.qr_code.save(
+                file_name,
+                ContentFile(buffer.getvalue()),
+                save=False
             )
-
-            self.qr_code = upload["public_id"]
 
             super().save(update_fields=["qr_code", "qr_value"])
 
     def __str__(self):
         route_display = str(self.route) if self.route else "No Route"
         return f"{self.vehicle_name} ({self.license_plate}) – {route_display}"
+
 
 # ======================================================
 # WALLET MODEL

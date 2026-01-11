@@ -24,52 +24,87 @@
         </a>
       </li>
 
-      <li class="rdfs-sidebar__section">Driver & Vehicle</li>
-
-      <li class="rdfs-sidebar__item">
-        <a href="{% url 'vehicles:register_driver' %}" class="rdfs-sidebar__link">
-          <i class="bi bi-person-plus-fill"></i><span>Add Driver</span>
-        </a>
+      <li class="rdfs-sidebar__group">
+        <button class="rdfs-sidebar__group-toggle" type="button" aria-expanded="false" data-group="staff-manage-drivers">
+          <span>
+            <i class="bi bi-person-lines-fill"></i>
+            <span>Manage Drivers</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-sidebar__group-chevron"></i>
+        </button>
+        <ul class="rdfs-sidebar__group-list" aria-hidden="true">
+          <li class="rdfs-sidebar__item">
+            <a href="{% url 'vehicles:register_driver' %}" class="rdfs-sidebar__link">
+              <i class="bi bi-person-plus-fill"></i><span>Add Driver</span>
+            </a>
+          </li>
+          <li class="rdfs-sidebar__item">
+            <a href="{% url 'vehicles:registered_drivers' %}" class="rdfs-sidebar__link">
+              <i class="bi bi-people-fill"></i><span>Drivers</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
-      <li class="rdfs-sidebar__item">
-        <a href="{% url 'vehicles:registered_drivers' %}" class="rdfs-sidebar__link">
-          <i class="bi bi-people-fill"></i><span>Drivers</span>
-        </a>
+      <li class="rdfs-sidebar__group">
+        <button class="rdfs-sidebar__group-toggle" type="button" aria-expanded="false" data-group="staff-manage-vehicles">
+          <span>
+            <i class="bi bi-truck-front-fill"></i>
+            <span>Manage Vehicles</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-sidebar__group-chevron"></i>
+        </button>
+        <ul class="rdfs-sidebar__group-list" aria-hidden="true">
+          <li class="rdfs-sidebar__item">
+            <a href="{% url 'vehicles:register_vehicle' %}" class="rdfs-sidebar__link">
+              <i class="bi bi-truck-front-fill"></i><span>Add Vehicle</span>
+            </a>
+          </li>
+          <li class="rdfs-sidebar__item">
+            <a href="{% url 'vehicles:registered_vehicles' %}" class="rdfs-sidebar__link">
+              <i class="bi bi-card-list"></i><span>Vehicles</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
-      <li class="rdfs-sidebar__item">
-        <a href="{% url 'vehicles:register_vehicle' %}" class="rdfs-sidebar__link">
-          <i class="bi bi-truck-front-fill"></i><span>Add Vehicle</span>
-        </a>
+      <li class="rdfs-sidebar__group">
+        <button class="rdfs-sidebar__group-toggle" type="button" aria-expanded="false" data-group="staff-transactions">
+          <span>
+            <i class="bi bi-wallet2"></i>
+            <span>Transactions</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-sidebar__group-chevron"></i>
+        </button>
+        <ul class="rdfs-sidebar__group-list" aria-hidden="true">
+          <li class="rdfs-sidebar__item">
+            <a href="{% url 'terminal:deposit_menu' %}" class="rdfs-sidebar__link">
+              <i class="bi bi-cash-stack"></i><span>Deposits</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
-      <li class="rdfs-sidebar__item">
-        <a href="{% url 'vehicles:registered_vehicles' %}" class="rdfs-sidebar__link">
-          <i class="bi bi-card-list"></i><span>Vehicles</span>
-        </a>
-      </li>
-
-      <li class="rdfs-sidebar__section">Transactions</li>
-
-      <li class="rdfs-sidebar__item">
-        <a href="{% url 'terminal:deposit_menu' %}" class="rdfs-sidebar__link">
-          <i class="bi bi-cash-stack"></i><span>Deposits</span>
-        </a>
-      </li>
-
-      <li class="rdfs-sidebar__section">QR</li>
-
-      <li class="rdfs-sidebar__item">
-        <a href="{% url 'terminal:qr_scan_entry' %}" class="rdfs-sidebar__link">
-          <i class="bi bi-qr-code-scan"></i><span>Entry</span>
-        </a>
-      </li>
-
-      <li class="rdfs-sidebar__item">
-        <a href="{% url 'terminal:qr_exit_page' %}" class="rdfs-sidebar__link">
-          <i class="bi bi-qr-code"></i><span>Exit</span>
-        </a>
+      <li class="rdfs-sidebar__group">
+        <button class="rdfs-sidebar__group-toggle" type="button" aria-expanded="false" data-group="staff-qr">
+          <span>
+            <i class="bi bi-qr-code"></i>
+            <span>QR Operations</span>
+          </span>
+          <i class="bi bi-chevron-down rdfs-sidebar__group-chevron"></i>
+        </button>
+        <ul class="rdfs-sidebar__group-list" aria-hidden="true">
+          <li class="rdfs-sidebar__item">
+            <a href="{% url 'terminal:qr_scan_entry' %}" class="rdfs-sidebar__link">
+              <i class="bi bi-qr-code-scan"></i><span>Entry</span>
+            </a>
+          </li>
+          <li class="rdfs-sidebar__item">
+            <a href="{% url 'terminal:qr_exit_page' %}" class="rdfs-sidebar__link">
+              <i class="bi bi-qr-code"></i><span>Exit</span>
+            </a>
+          </li>
+        </ul>
       </li>
 
       <li class="rdfs-sidebar__section">Monitoring</li>
@@ -138,6 +173,59 @@
   margin:0;
 }
 
+.rdfs-sidebar__group {
+  margin-bottom: 4px;
+}
+
+.rdfs-sidebar__group-toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 7px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--rdfs-text);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--rdfs-transition);
+}
+
+.rdfs-sidebar__group-toggle span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rdfs-sidebar__group-toggle:hover,
+.rdfs-sidebar__group-toggle:focus-visible {
+  background: var(--rdfs-blue-soft);
+}
+
+.rdfs-sidebar__group-chevron {
+  transition: transform .25s ease;
+}
+
+.rdfs-sidebar__group-toggle[aria-expanded="true"] .rdfs-sidebar__group-chevron {
+  transform: rotate(180deg);
+}
+
+.rdfs-sidebar__group-list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .25s ease;
+}
+
+.rdfs-sidebar__group-list[aria-hidden="false"] {
+  max-height: 400px;
+}
+
 /* SECTION LABEL */
 .rdfs-sidebar__section{
   margin:10px 8px 4px;
@@ -169,7 +257,8 @@
   min-width:18px;
 }
 
-.rdfs-sidebar__link:hover{
+.rdfs-sidebar__link:hover,
+.rdfs-sidebar__link.active{
   background:var(--rdfs-blue-soft);
   transform:translateX(2px);
 }
