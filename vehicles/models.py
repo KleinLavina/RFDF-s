@@ -12,6 +12,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from django.core.files.base import ContentFile
+from cloudinary.models import CloudinaryField
 
 
 # ======================================================
@@ -85,11 +86,12 @@ class Driver(models.Model):
     # -----------------------------
     # DRIVER PHOTO (REQUIRED)
     # -----------------------------
-    driver_photo = models.ImageField(
-    upload_to="drivers/photos/",
-    blank=False,
-    null=False,
-)
+    driver_photo = CloudinaryField(
+        'driver_photo',
+        max_length=255,
+        blank=False,
+        null=False,
+    )
 
 
 
@@ -179,10 +181,11 @@ class Vehicle(models.Model):
     seat_capacity = models.PositiveIntegerField(blank=True, null=True)
 
     # ✅ LOCAL QR IMAGE FIELD
-    qr_code = models.ImageField(
-        upload_to="vehicles/qrcodes/",
+    qr_code = CloudinaryField(
+        'qr_code',
+        max_length=255,
         blank=True,
-        null=True
+        null=True,
     )
 
     qr_value = models.CharField(

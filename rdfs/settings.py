@@ -50,7 +50,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # ❌ REMOVED Cloudinary apps
+    # Cloudinary (media storage)
+    'cloudinary',
+    'cloudinary_storage',
 
     # Project apps
     'accounts',
@@ -147,6 +149,17 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
+# --------------------------------------------------
+# Cloudinary media storage
+# --------------------------------------------------
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': env('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+}
 
 # ======================================================
 # MEDIA FILES (LOCAL STORAGE)
