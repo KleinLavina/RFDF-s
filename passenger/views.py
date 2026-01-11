@@ -6,10 +6,11 @@ from terminal.models import EntryLog, SystemSettings
 from vehicles.models import Vehicle, Route
 from django.http import JsonResponse
 from django.db.models import Q
+from collections import OrderedDict
 
 # Passenger-specific delete window (minutes) for quick hide on public view
-PASSENGER_DELETE_AFTER_MINUTES = 10
-DEPARTED_VISIBLE_MINUTES = 5
+PASSENGER_DELETE_AFTER_MINUTES = 1
+DEPARTED_VISIBLE_MINUTES = 1
 
 
 def _maintenance_task(now=None):
@@ -32,8 +33,8 @@ def _maintenance_task(now=None):
 
     # 2) Delete departed/non-active entries older than PASSENGER_DELETE_AFTER_MINUTES
     delete_cutoff = now - timedelta(minutes=PASSENGER_DELETE_AFTER_MINUTES)
-    old_qs = EntryLog.objects.filter(created_at__lt=delete_cutoff).filter(
-        Q(is_active=False) | Q(departed_at__isnull=False)
+    old_qs = EntryLog.objects.filter(
+        departed_at__lt=delete_cutoff
     )
     if old_qs.exists():
         old_qs.delete()
@@ -50,6 +51,60 @@ def contact(request):
     return render(request, 'passenger/contact.html')
 
 
+def _build_public_queue_entries(queue_logs, now, departure_duration, departed_cutoff):
+    route_groups = OrderedDict()
+    for log in queue_logs:
+        vehicle = getattr(log, "vehicle", None)
+        route = getattr(vehicle, "route", None)
+        route_key = route.id if route else None
+        if route_key not in route_groups:
+            route_name = (
+                f"{route.origin} → {route.destination}" if route else "Unassigned"
+            )
+            route_groups[route_key] = {"route_name": route_name, "logs": []}
+        route_groups[route_key]["logs"].append(log)
+
+    entries = []
+    for group in route_groups.values():
+        route_name = group["route_name"]
+        boarding_log = next((log for log in group["logs"] if log.is_active), None)
+
+        for log in group["logs"]:
+            if log.is_active and log == boarding_log:
+                status = "Boarding"
+            elif log.is_active:
+                status = "Queued"
+            elif log.departed_at and log.departed_at >= departed_cutoff:
+                status = "Departed"
+            else:
+                continue
+
+            expiry_timestamp = None
+            if status == "Boarding":
+                expiry = log.created_at + timedelta(minutes=departure_duration)
+                expiry_timestamp = int(expiry.timestamp())
+
+            vehicle = getattr(log, "vehicle", None)
+            driver = getattr(vehicle, "assigned_driver", None)
+            entry_display = timezone.localtime(log.created_at).strftime("%b %d, %Y %I:%M %p")
+            entry_numeric = timezone.localtime(log.created_at).strftime("%b %d, %Y %I:%M %p")
+            departure_time = log.created_at + timedelta(minutes=departure_duration)
+            departure_display = timezone.localtime(departure_time).strftime("%b %d, %Y %I:%M %p")
+            entries.append({
+                "id": log.id,
+                "entry_time_display": entry_display,
+                "entry_time_numeric": entry_numeric,
+                "departure_time_display": departure_display,
+                "vehicle_plate": vehicle.license_plate if vehicle else "—",
+                "route": route_name,
+                "driver_name": f"{driver.first_name} {driver.last_name}" if driver else "N/A",
+                "status": status,
+                "countdown_active": status == "Boarding",
+                "expiry_timestamp": expiry_timestamp,
+            })
+    return entries
+
+
 def public_queue_view(request):
     """
     Public Passenger View:
@@ -64,49 +119,39 @@ def public_queue_view(request):
     route_filter = request.GET.get('route')
     settings = SystemSettings.get_solo()
     departure_duration = int(getattr(settings, "departure_duration_minutes", 30))
+    departed_cutoff = now - timedelta(minutes=DEPARTED_VISIBLE_MINUTES)
 
-    keep_departed_for = timedelta(minutes=DEPARTED_VISIBLE_MINUTES)
-    departed_cutoff = now - keep_departed_for
-
-    queue_entries = (
+    queue_logs = (
         EntryLog.objects
         .select_related('vehicle', 'vehicle__assigned_driver', 'vehicle__route')
         .filter(
-            Q(is_active=True, created_at__date=timezone.localtime(now).date()) |
-            Q(departed_at__gte=departed_cutoff)
+            status=EntryLog.STATUS_SUCCESS
+        )
+        .filter(
+            Q(is_active=True) | Q(departed_at__gte=departed_cutoff)
         )
         .order_by('created_at')
     )
 
     if route_filter and route_filter != 'all':
-        queue_entries = queue_entries.filter(vehicle__route_id=route_filter)
+        queue_logs = queue_logs.filter(vehicle__route_id=route_filter)
 
-    entries = []
+    from collections import OrderedDict
+    route_groups = OrderedDict()
+    for log in queue_logs:
+        vehicle = getattr(log, "vehicle", None)
+        route = getattr(vehicle, "route", None)
+        route_key = route.id if route else None
+        if route_key not in route_groups:
+            route_groups[route_key] = {
+                "route_name": (
+                    f"{route.origin} → {route.destination}" if route else "Unassigned"
+                ),
+                "logs": []
+            }
+        route_groups[route_key]["logs"].append(log)
 
-    for log in queue_entries:
-        v = log.vehicle
-        d = v.assigned_driver if v else None
-
-        # ⏱ Base time for countdown
-        base_time = log.departed_at if not log.is_active and log.departed_at else log.created_at
-        expiry_time = base_time + timedelta(minutes=departure_duration)
-
-        remaining_seconds = int((expiry_time - now).total_seconds())
-
-        entries.append({
-            "id": log.id,
-            "vehicle": v,
-            "driver": d,
-            "route": getattr(v.route, "name", None) if v and v.route else None,
-
-            "entry_time": timezone.localtime(log.created_at),
-            "departed_at": timezone.localtime(log.departed_at) if log.departed_at else None,
-            "expiry_time": timezone.localtime(expiry_time),
-
-            "remaining_seconds": max(remaining_seconds, 0),
-            "is_expired": remaining_seconds <= 0,
-            "is_active": log.is_active,
-        })
+    entries = _build_public_queue_entries(queue_logs, now, departure_duration, departed_cutoff)
 
     routes = Route.objects.filter(active=True).order_by("origin", "destination")
 
@@ -129,42 +174,26 @@ def public_queue_data(request):
     settings = SystemSettings.get_solo()
     departure_duration = int(getattr(settings, "departure_duration_minutes", 30))
 
-    ten_mins_ago = now - timedelta(minutes=10)
     route_filter = request.GET.get("route", "all")
 
-    queue_entries = (
-        EntryLog.objects.select_related("vehicle", "vehicle__assigned_driver", "vehicle__route")
+    queue_logs = (
+        EntryLog.objects
+        .select_related("vehicle", "vehicle__assigned_driver", "vehicle__route")
         .filter(
-            status=EntryLog.STATUS_SUCCESS,
-            created_at__gte=ten_mins_ago - timedelta(minutes=departure_duration)
+            status=EntryLog.STATUS_SUCCESS
+        )
+        .filter(
+            Q(is_active=True) | Q(departed_at__gte=departed_cutoff)
         )
         .order_by("created_at")
     )
 
     if route_filter and route_filter != "all":
-        queue_entries = queue_entries.filter(vehicle__route_id=route_filter)
+        queue_logs = queue_logs.filter(vehicle__route_id=route_filter)
 
-    data = []
-    for q in queue_entries:
-        v = q.vehicle
-        if q.is_active and timezone.localtime(q.created_at).date() != timezone.localtime(now).date():
-            continue
+    entries = _build_public_queue_entries(queue_logs, now, departure_duration, departed_cutoff)
 
-        departure_time = q.created_at + timedelta(minutes=departure_duration)
-        is_boarding = q.is_active
-        is_departed_recently = (
-            not q.is_active and q.departed_at and
-            (now - q.departed_at <= timedelta(minutes=PASSENGER_DELETE_AFTER_MINUTES))
-        )
-
-        if is_boarding or is_departed_recently:
-            data.append({
-                "plate": v.license_plate if v else "—",
-                "driver": f"{v.assigned_driver.first_name} {v.assigned_driver.last_name}"
-                          if v and v.assigned_driver else "—",
-                "route": f"{v.route.origin} → {v.route.destination}" if v and v.route else "—",
-                "status": "Boarding" if is_boarding else "Departed",
-                "departure": timezone.localtime(departure_time).strftime("%Y-%m-%d %H:%M:%S"),
-            })
-
-    return JsonResponse({"entries": data})
+    return JsonResponse({
+        "entries": entries,
+        "server_time": int(now.timestamp()),
+    })

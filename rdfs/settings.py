@@ -2,10 +2,6 @@ import os
 from pathlib import Path
 import environ
 
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
-
 # ======================================================
 # BASE DIRECTORY
 # ======================================================
@@ -53,10 +49,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Cloudinary
-    'cloudinary',
-    'cloudinary_storage',
 
     # Project apps
     'accounts',
@@ -155,12 +147,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # ======================================================
-# MEDIA FILES (CLOUDINARY)
+# MEDIA FILES (LOCAL STORAGE)
 # ======================================================
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-MEDIA_URL = '/media/'  # Cloudinary overrides actual URLs
-
-# ⚠️ DO NOT DEFINE MEDIA_ROOT WHEN USING CLOUDINARY
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ======================================================
 # DEFAULT PK

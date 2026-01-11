@@ -160,31 +160,46 @@
 
   <!-- SUMMARY -->
   <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-md-4">
       <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--primary">
         <h5>Drivers</h5>
         <h3>{{ total_drivers }}</h3>
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-4">
       <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--soft">
         <h5>Vehicles</h5>
         <h3>{{ total_vehicles }}</h3>
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-4">
       <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--neutral">
         <h5>In Queue</h5>
         <h3>{{ total_queue }}</h3>
       </div>
     </div>
+  </div>
 
-    <div class="col-md-3">
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
       <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--accent">
-        <h5>Total Revenue</h5>
-        <h3>₱{{ total_profit|floatformat:2 }}</h3>
+        <h5>Monthly Revenue</h5>
+        <h3>₱{{ monthly_revenue|floatformat:2 }}</h3>
+        <p class="mb-0 small text-white-75">
+          {{ now|date:"F Y" }}
+        </p>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--accent">
+        <h5>Annual Revenue</h5>
+        <h3>₱{{ annual_revenue|floatformat:2 }}</h3>
+        <p class="mb-0 small text-white-75">
+          {{ now|date:"Y" }}
+        </p>
       </div>
     </div>
   </div>

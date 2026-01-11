@@ -210,6 +210,17 @@ def admin_dashboard_view(request):
 
     total_profit = Profit.objects.aggregate(Sum('amount'))['amount__sum'] or 0
 
+    today = timezone.localtime().date()
+    monthly_revenue = EntryLog.objects.filter(
+        status=EntryLog.STATUS_SUCCESS,
+        created_at__year=today.year,
+        created_at__month=today.month,
+    ).aggregate(Sum('fee_charged'))['fee_charged__sum'] or 0
+    annual_revenue = EntryLog.objects.filter(
+        status=EntryLog.STATUS_SUCCESS,
+        created_at__year=today.year,
+    ).aggregate(Sum('fee_charged'))['fee_charged__sum'] or 0
+
     # Chart data for last 7 days (server-side)
     today = timezone.now().date()
     last_7_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
@@ -227,6 +238,8 @@ def admin_dashboard_view(request):
         'total_vehicles': total_vehicles,
         'total_queue': total_queue,
         'total_profit': total_profit,
+        'monthly_revenue': monthly_revenue,
+        'annual_revenue': annual_revenue,
         'chart_labels': chart_labels,
         'chart_data': chart_data,
         'now': timezone.now(),

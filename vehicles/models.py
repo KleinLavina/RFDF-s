@@ -1,6 +1,7 @@
 import re
 import uuid
 import qrcode
+from decimal import Decimal
 from io import BytesIO
 
 from django.core.files import File
@@ -12,8 +13,6 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from django.core.files.base import ContentFile
-from cloudinary.models import CloudinaryField
-
 
 # ======================================================
 # ROUTE MODEL
@@ -86,9 +85,8 @@ class Driver(models.Model):
     # -----------------------------
     # DRIVER PHOTO (REQUIRED)
     # -----------------------------
-    driver_photo = CloudinaryField(
-        'driver_photo',
-        max_length=255,
+    driver_photo = models.ImageField(
+        upload_to="drivers/photos/",
         blank=False,
         null=False,
     )
@@ -181,9 +179,8 @@ class Vehicle(models.Model):
     seat_capacity = models.PositiveIntegerField(blank=True, null=True)
 
     # ✅ LOCAL QR IMAGE FIELD
-    qr_code = CloudinaryField(
-        'qr_code',
-        max_length=255,
+    qr_code = models.ImageField(
+        upload_to="vehicles/qrcodes/",
         blank=True,
         null=True,
     )
@@ -263,12 +260,37 @@ class Vehicle(models.Model):
 # ======================================================
 # WALLET MODEL
 # ======================================================
-class Wallet(models.Model):
+class VehicleBalanceBase(models.Model):
+    """Shared balance behavior for vehicle-linked ledgers."""
+
+    balance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    class Meta:
+        abstract = True
+
+    def deposit(self, amount):
+        return self._adjust_balance(abs(Decimal(amount)))
+
+    def withdraw(self, amount):
+        amount = abs(Decimal(amount))
+        if self.balance < amount:
+            raise ValidationError("Insufficient balance.")
+        return self._adjust_balance(-amount)
+
+    def _adjust_balance(self, amount):
+        self.__class__.objects.filter(pk=self.pk).update(balance=F("balance") + amount)
+        self.refresh_from_db()
+        return self.balance
+
+
+class Wallet(VehicleBalanceBase):
     vehicle = models.OneToOneField(Vehicle, on_delete=models.CASCADE, related_name='wallet')
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     currency = models.CharField(max_length=10, default='PHP')
     status = models.CharField(max_length=10, default='active')
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -302,10 +324,7 @@ class Deposit(models.Model):
             super().save(*args, **kwargs)
 
             if is_new:
-                Wallet.objects.filter(pk=self.wallet.pk).update(
-                    balance=F('balance') + self.amount
-                )
-                self.wallet.refresh_from_db()
+                self.wallet.deposit(self.amount)
 
     def __str__(self):
         return f"Deposit {self.reference_number} – {self.amount}"

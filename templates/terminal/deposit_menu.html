@@ -1,315 +1,367 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Deposit Menu | RDFS{% endblock %}
+{% block title %}Driver Wallets | RDFS{% endblock %}
 
 {% block content %}
 
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 <link rel="stylesheet" href="{% static 'styles/deposit_menu.css' %}" />
-<link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
 
-<div class="p-4 rdfs-deposit-scope rdfs-deposit-container">
+<div class="p-4 rdfs-deposit-scope">
+  <div class="rdfs-deposit-container">
 
-  <!-- HEADER -->
-  <div class="rdfs-deposit-header">
-    <div>
-      <h3 class="rdfs-deposit-title mb-1">
-        <i class="fa-solid fa-wallet me-2"></i>
-        Deposit Menu
-      </h3>
-      <span class="rdfs-deposit-note">
-        Minimum required before entry:
-        <strong>₱{{ min_deposit }}</strong>
-      </span>
+    <div class="wallets-header">
+      <div>
+        <h3 class="wallets-title mb-1">
+          <i class="fa-solid fa-wallet me-2"></i>
+          Driver Wallets
+        </h3>
+        <p class="wallets-note mb-0">
+          Minimum required before entry:
+          <strong>₱{{ min_deposit }}</strong>
+        </p>
+        <p class="text-muted small mb-0">
+          Showing {{ wallets|length }} of {{ wallets_total }} wallets.
+        </p>
+      </div>
+      <div class="wallets-actions">
+        <button type="button"
+                class="btn btn-primary me-2"
+                data-bs-toggle="modal"
+                data-bs-target="#addDepositModal">
+          <i class="fa-solid fa-circle-plus me-1"></i>
+          Add Deposit
+        </button>
+        <a href="{% url 'terminal:deposit_history' %}"
+           class="btn btn-outline-secondary">
+          <i class="fa-solid fa-clock me-1"></i>
+          Deposit History
+        </a>
+      </div>
     </div>
 
-    <a href="{% url 'accounts:staff_dashboard' %}"
-       class="btn rdfs-deposit-back">
-      <i class="fa-solid fa-arrow-left me-1"></i>
-      Back to Dashboard
-    </a>
-  </div>
-  <div id="rdfsActionToast" class="rdfs-action-toast" role="status" aria-live="polite">
-    <i class="fa-solid fa-circle-check"></i>
-    <span id="rdfsActionToastText"></span>
-  </div>
-
-  {% if role != 'admin' %}
-  <!-- ================= STAFF VIEW ================= -->
-  <div class="card border-0 mb-4 rdfs-deposit-card">
-    <div class="card-header rdfs-deposit-header-dark fw-semibold">
-      <i class="fa-solid fa-circle-plus me-1"></i>
-      Add Deposit
+    <div id="rdfsActionToast" class="rdfs-action-toast" role="status" aria-live="polite">
+      <i class="fa-solid fa-circle-check"></i>
+      <span id="rdfsActionToastText"></span>
     </div>
 
-    <div class="card-body">
-      <form method="POST" action="{% url 'terminal:deposit_menu' %}">
-        {% csrf_token %}
-        <div class="row g-3">
-
-          <div class="col-md-5">
-            <label class="form-label fw-semibold">Select Vehicle</label>
-            <select id="rdfsVehicleSelect"
-                    name="vehicle_id"
-                    class="form-select"
-                    required>
-              <option value="">-- Choose Vehicle --</option>
-              {% for driver in drivers %}
-                {% for vehicle in driver.vehicles.all %}
-                  <option value="{{ vehicle.id }}">
-                    {{ vehicle.license_plate }} — {{ driver.last_name }},
-                    {{ driver.first_name }}
-                  </option>
-                {% endfor %}
-              {% endfor %}
+    <section class="wallets-toolbar card border-0 mb-4">
+      <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Search by driver or plate</label>
+            <input type="text"
+                   name="search_query"
+                   value="{{ wallet_search }}"
+                   class="form-control"
+                   placeholder="Type driver name, license, or plate">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Sort wallets</label>
+            <select name="wallet_sort" class="form-select">
+              <option value="newest" {% if wallet_sort == 'newest' %}selected{% endif %}>
+                Newest deposits
+              </option>
+              <option value="largest" {% if wallet_sort == 'largest' %}selected{% endif %}>
+                Largest deposits
+              </option>
+              <option value="smallest" {% if wallet_sort == 'smallest' %}selected{% endif %}>
+                Smallest deposits
+              </option>
+              <option value="driver_asc" {% if wallet_sort == 'driver_asc' %}selected{% endif %}>
+                Driver A → Z
+              </option>
+              <option value="driver_desc" {% if wallet_sort == 'driver_desc' %}selected{% endif %}>
+                Driver Z → A
+              </option>
             </select>
           </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary w-100">
+              <i class="fa-solid fa-arrow-down-up me-1"></i>
+              Apply
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
 
-          <div class="col-md-4">
+    <section class="wallets-table card border-0 mb-4">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light text-muted small text-uppercase">
+              <tr>
+                <th>#</th>
+                <th>Driver</th>
+                <th>Plate</th>
+                <th>Balance</th>
+                <th>Last deposit</th>
+                <th>Date</th>
+                <th>Records</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if wallets %}
+                {% for wallet in wallets %}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                      {{ wallet.vehicle.assigned_driver.first_name }}
+                      {{ wallet.vehicle.assigned_driver.last_name }}
+                    </td>
+                    <td>{{ wallet.vehicle.license_plate }}</td>
+                    <td>₱{{ wallet.balance|floatformat:2 }}</td>
+                    <td>₱{{ wallet.last_deposit_amount|default:"0.00"|floatformat:2 }}</td>
+                    <td>
+                      {% if wallet.last_deposit_at %}
+                        {{ wallet.last_deposit_at|date:"M d, Y h:i A" }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+                    <td>{{ wallet.deposit_count }}</td>
+                    <td>
+                      <button type="button"
+                              class="btn btn-sm btn-outline-primary wallet-deposit-btn"
+                              data-vehicle="{{ wallet.vehicle.id }}"
+                              data-display="{{ wallet.vehicle.assigned_driver.first_name }} {{ wallet.vehicle.assigned_driver.last_name }} · {{ wallet.vehicle.license_plate }}">
+                        Deposit
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">
+                    No wallets match the current filters.
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- Add Deposit Modal -->
+<div class="modal fade" id="addDepositModal" tabindex="-1" aria-labelledby="addDepositModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title" id="addDepositModalLabel">
+          <i class="fa-solid fa-circle-plus me-1"></i>
+          Add Deposit
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{% url 'terminal:deposit_menu' %}" id="rdfsAddDepositForm">
+          {% csrf_token %}
+          <input type="hidden" name="vehicle_id" id="rdfsVehicleId">
+
+          <div class="mb-3 position-relative">
+            <label class="form-label fw-semibold">Driver name or license</label>
+            <input type="text"
+                   id="rdfsDriverSearch"
+                   class="form-control"
+                   placeholder="Type driver, license, or plate">
+            <div id="rdfsDriverSuggestions" class="driver-suggestions shadow"></div>
+          </div>
+
+          <div class="mb-3">
             <label class="form-label fw-semibold">Deposit Amount (₱)</label>
             <input type="number"
                    name="amount"
                    min="1"
                    step="0.01"
                    class="form-control"
-                   required
-                   placeholder="Enter amount">
+                   placeholder="Enter amount"
+                   required>
           </div>
 
-          <div class="col-md-3 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100">
-              <i class="fa-solid fa-hand-holding-dollar me-1"></i>
-              Add Deposit
-            </button>
+          <div class="mb-3">
+            <p id="rdfsSelectedDriverLabel" class="mb-1 text-muted small">
+              Search by driver name, license, plate, or driver ID.
+            </p>
+            <div id="rdfsWalletInfo" class="small fw-semibold text-muted"></div>
           </div>
 
-        </div>
-      </form>
-
-      <div id="rdfsWalletInfo"
-           class="mt-2 text-muted small fw-semibold"></div>
+          <button type="submit" class="btn btn-primary w-100" id="rdfsAddDepositBtn" disabled>
+            <i class="fa-solid fa-hand-holding-dollar me-1"></i>
+            Add Deposit
+          </button>
+        </form>
+      </div>
     </div>
   </div>
-  {% endif %}
-
-  <div class="card border-0 mb-4 rdfs-deposit-card">
-    <div class="card-header rdfs-deposit-header-dark fw-semibold d-flex justify-content-between align-items-center">
-      <div>
-        <i class="fa-solid fa-clock me-2"></i>
-        Deposit History
-      </div>
-      <span class="badge bg-light text-dark rdfs-deposit-today">
-        {% if start_date or end_date %}
-          Showing: {{ start_date }}{% if end_date %} — {{ end_date }}{% endif %}
-        {% else %}
-          Showing recent deposits
-        {% endif %}
-        •
-        {% if history_sort == 'largest' %}
-          Largest first
-        {% elif history_sort == 'smallest' %}
-          Smallest first
-        {% elif history_sort == 'all' %}
-          All deposits
-        {% else %}
-          Newest first
-        {% endif %}
-      </span>
-    </div>
-
-    <div class="card-body">
-      {% if role == 'admin' %}
-      <form method="get" class="row g-3 mb-3">
-        <input type="hidden" name="history_sort" value="{{ history_sort }}">
-
-        <div class="col-md-5">
-          <label class="form-label fw-semibold">Start Date</label>
-          <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
-        </div>
-
-        <div class="col-md-5">
-          <label class="form-label fw-semibold">End Date</label>
-          <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
-        </div>
-
-        <div class="col-md-2 d-flex align-items-end justify-content-end">
-          <button type="submit" class="btn btn-primary w-auto">
-            <i class="fa-solid fa-filter me-1"></i>
-            Apply Filter
-          </button>
-        </div>
-      </form>
-      {% endif %}
-
-      <form method="get" class="row g-3 mb-4 align-items-end">
-        <input type="hidden" name="start_date" value="{{ start_date }}">
-        <input type="hidden" name="end_date" value="{{ end_date }}">
-        <input type="hidden" name="vehicle_plate" value="{{ vehicle_plate }}">
-
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Deposit Order</label>
-          <select name="history_sort" class="form-select">
-            <option value="newest" {% if history_sort == 'newest' %}selected{% endif %}>
-              Newest deposits
-            </option>
-            <option value="largest" {% if history_sort == 'largest' %}selected{% endif %}>
-              Largest deposits
-            </option>
-            <option value="smallest" {% if history_sort == 'smallest' %}selected{% endif %}>
-              Smallest deposits
-            </option>
-            <option value="all" {% if history_sort == 'all' %}selected{% endif %}>
-              All deposits
-            </option>
-          </select>
-        </div>
-
-        <div class="col-md-2 d-flex align-items-end justify-content-end">
-          <button type="submit" class="btn btn-outline-secondary w-auto">
-            <i class="fa-solid fa-arrow-down-up me-1"></i>
-            Apply
-          </button>
-        </div>
-      </form>
-
-      <div class="table-responsive">
-        <table id="rdfsDepositTable"
-               class="table table-striped table-hover align-middle rdfs-deposit-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Reference</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Payment Method</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for deposit in history_deposits %}
-            <tr>
-              <td>{{ forloop.counter }}</td>
-              <td><strong>{{ deposit.reference_number }}</strong></td>
-              <td>₱{{ deposit.amount|floatformat:2 }}</td>
-              <td>{{ deposit.status|capfirst }}</td>
-              <td>{{ deposit.payment_method|capfirst }}</td>
-              <td>{{ deposit.created_at|date:"M d, Y h:i A" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" class="text-center text-muted">
-                No deposits found.
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-    </div>
-  </div>
-
-
-
 </div>
 
-<!-- ================= JS (FULL) ================= -->
-
-<link rel="stylesheet"
-      href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
-
-<script src="{% static 'js/jquery-3.6.0.min.js' %}"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{{ driver_options|json_script:"driver-options-data" }}
+<script>
+  window.driverOptions = JSON.parse(document.getElementById("driver-options-data").textContent || "[]");
+</script>
+{{ toast_messages|json_script:"rdfs-toast-messages" }}
+<script>
+  window.actionMessages = JSON.parse(document.getElementById("rdfs-toast-messages").textContent || "[]");
+</script>
 
 <script>
-document.addEventListener("DOMContentLoaded",function(){
+document.addEventListener("DOMContentLoaded", function () {
+  const driverInput = document.getElementById("rdfsDriverSearch");
+  const suggestionBox = document.getElementById("rdfsDriverSuggestions");
+  const vehicleField = document.getElementById("rdfsVehicleId");
+  const walletInfo = document.getElementById("rdfsWalletInfo");
+  const addButton = document.getElementById("rdfsAddDepositBtn");
+  const selectedLabel = document.getElementById("rdfsSelectedDriverLabel");
+  const driverOptions = window.driverOptions || [];
 
-  /* DATATABLE */
-  if ($('#rdfsDepositTable').length && $.fn.DataTable) {
-    $('#rdfsDepositTable').DataTable({
-      pageLength:5,
-      lengthMenu:[5,10,25,50],
-      order:[],
-      language:{
-        search:"_INPUT_",
-        searchPlaceholder:"Search deposits..."
-      }
-    });
-  }
+  const showToast = (message, isError=false) => {
+    const toastEl = document.getElementById("rdfsActionToast");
+    const toastText = document.getElementById("rdfsActionToastText");
+    if (!toastEl || !toastText) return;
+    toastText.textContent = message;
+    toastEl.classList.toggle("visible", !isError);
+    setTimeout(() => toastEl.classList.remove("visible"), 3000);
+  };
 
-  if ($('#rdfsVehicleSelect').length && $.fn.select2) {
-    $('#rdfsVehicleSelect').select2({
-      placeholder:'Search plate or driver',
-      dropdownCssClass:'rdfs-select2-dropdown',
-      width:'100%',
-      allowClear:true,
-      minimumResultsForSearch:0
-    });
-  }
+  function renderSuggestions(value) {
+    suggestionBox.innerHTML = "";
+    const query = value.trim().toLowerCase();
+    if (!query) {
+      return;
+    }
 
-  /* WALLET BALANCE AJAX */
-  if ($('#rdfsVehicleSelect').length) {
-    $('#rdfsVehicleSelect').on('change',function(){
-      const vehicleId=$(this).val();
-      const info=$('#rdfsWalletInfo');
-
-      if(!vehicleId){
-        info.html('');
-        return;
-      }
-
-      info.html(
-        '<i class="fa-solid fa-arrows-rotate rdfs-deposit-spin me-1"></i> Checking balance...'
+    const matches = driverOptions.filter(option => {
+      return (
+        option.driver_name.toLowerCase().includes(query) ||
+        option.license_plate.toLowerCase().includes(query) ||
+        (option.license_number || "").toLowerCase().includes(query)
       );
+    }).slice(0, 6);
 
-      $.get("{% url 'terminal:ajax_get_wallet_balance' %}",{vehicle_id:vehicleId})
-        .done(function(res){
-          if(res.success){
-            info.html(
-              `💰 Current Balance for <strong>${res.vehicle}</strong>: ₱${res.balance.toFixed(2)}`
-            );
-          }else{
-            info.html(`<span class="text-danger">⚠️ ${res.message}</span>`);
-          }
-        });
+    if (!matches.length) {
+      const row = document.createElement("div");
+      row.className = "driver-suggestion empty";
+      row.textContent = "No matching driver found.";
+      suggestionBox.appendChild(row);
+      return;
+    }
+
+    matches.forEach(option => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "driver-suggestion";
+      row.dataset.vehicleId = option.vehicle_id;
+      row.dataset.display = option.display;
+      row.dataset.license = option.license_number || "N/A";
+      row.innerHTML = `<strong>${option.display}</strong>
+                       <span class="text-muted small d-block">License: ${option.license_number || 'N/A'}</span>`;
+      suggestionBox.appendChild(row);
     });
   }
 
-  const actionMessages = [
-    {% for message in messages %}
-    {text:"{{ message|escapejs }}"}{% if not forloop.last %},{% endif %}
-    {% endfor %}
-  ];
-  const toastEl = document.getElementById("rdfsActionToast");
-  const toastText = document.getElementById("rdfsActionToastText");
-  let toastIndex = 0;
-  let toastTimer;
+  function toggleSubmitState() {
+    addButton.disabled = !vehicleField.value;
+  }
 
-  function showToast(message){
-    if(!toastEl || !message) return;
-    toastText.textContent = message.text;
-    toastEl.classList.add("visible");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=>{
-      toastEl.classList.remove("visible");
-      setTimeout(()=>{
-        toastIndex += 1;
-        if(toastIndex < actionMessages.length){
-          showToast(actionMessages[toastIndex]);
+  driverInput.addEventListener("input", function () {
+    suggestionBox.innerHTML = "";
+    walletInfo.textContent = "";
+    vehicleField.value = "";
+    selectedLabel.textContent = driverInput.value
+      ? `Searching for "${driverInput.value}"`
+      : "Search by driver name, license, plate, or driver ID.";
+    toggleSubmitState();
+    renderSuggestions(driverInput.value);
+  });
+
+  suggestionBox.addEventListener("click", function (event) {
+    const entry = event.target.closest(".driver-suggestion");
+    if (!entry || !entry.dataset.vehicleId) return;
+    const vehicleId = entry.dataset.vehicleId;
+    const display = entry.dataset.display;
+
+    vehicleField.value = vehicleId;
+    driverInput.value = display;
+    selectedLabel.textContent = display;
+    suggestionBox.innerHTML = "";
+    toggleSubmitState();
+    fetchBalance(vehicleId);
+  });
+
+  document.addEventListener("click", function (event) {
+    if (!suggestionBox.contains(event.target) && event.target !== driverInput) {
+      suggestionBox.innerHTML = "";
+    }
+  });
+
+  function fetchBalance(vehicleId) {
+    walletInfo.innerHTML = '<i class="fa-solid fa-arrows-rotate rdfs-deposit-spin me-1"></i> Checking balance...';
+    fetch(`{% url 'terminal:ajax_get_wallet_balance' %}?vehicle_id=${vehicleId}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          walletInfo.innerHTML = `💰 Current balance for <strong>${data.vehicle}</strong>: ₱${data.balance.toFixed(2)}`;
+        } else {
+          walletInfo.innerHTML = `<span class="text-danger">⚠️ ${data.message}</span>`;
         }
-      }, 250);
-    }, 3000);
+      })
+      .catch(() => {
+        walletInfo.innerHTML = "";
+      });
   }
 
-  if(actionMessages.length){
-    showToast(actionMessages[0]);
+  const addDepositModalEl = document.getElementById("addDepositModal");
+  const bootstrapModal = window.bootstrap && addDepositModalEl
+    ? new bootstrap.Modal(addDepositModalEl)
+    : null;
+
+  document.querySelectorAll(".wallet-deposit-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const vehicleId = btn.dataset.vehicle;
+      const display = btn.dataset.display;
+
+      if (!vehicleId) return;
+
+      driverInput.value = display;
+      vehicleField.value = vehicleId;
+      selectedLabel.textContent = display;
+      toggleSubmitState();
+      suggestionBox.innerHTML = "";
+      fetchBalance(vehicleId);
+
+      if (bootstrapModal) {
+        bootstrapModal.show();
+      }
+    });
+  });
+
+  const actionMessages = window.actionMessages || [];
+
+  let toastIndex = 0;
+  function queueToast(index) {
+    if (!actionMessages[index]) return;
+    showToast(actionMessages[index]);
+    setTimeout(() => {
+      toastIndex += 1;
+      if (toastIndex < actionMessages.length) {
+        queueToast(toastIndex);
+      }
+    }, 3200);
   }
 
+  if (actionMessages.length) {
+    queueToast(0);
+  }
+
+  toggleSubmitState();
 });
 </script>
 

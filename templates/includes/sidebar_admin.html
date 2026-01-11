@@ -86,9 +86,15 @@
             </a>
           </li>
           <li class="rdfs-adm-sb__item">
-            <a href="{% url 'vehicles:queue_history' %}" class="rdfs-adm-sb__link">
+            <a href="{% url 'terminal:transactions' %}" class="rdfs-adm-sb__link">
+              <i class="bi bi-receipt-cutoff"></i>
+              <span>Transactions</span>
+            </a>
+          </li>
+          <li class="rdfs-adm-sb__item">
+            <a href="{% url 'terminal:transactions' %}" class="rdfs-adm-sb__link">
               <i class="bi bi-clock-history"></i>
-              <span>Queue History</span>
+              <span>Transactions & Queue</span>
             </a>
           </li>
         </ul>
@@ -268,6 +274,10 @@
 
 .rdfs-adm-sb__group-list[aria-hidden="false"] {
   max-height: 400px;
+}
+
+.rdfs-adm-sb__group-list .rdfs-adm-sb__link {
+  padding-left: 26px;
 }
 
 /* SECTION */

@@ -25,18 +25,19 @@
        YOUR CSS
   ================================ -->
   <link rel="stylesheet" href="{% static 'styles/passenger/03.css' %}">
-   <link rel="stylesheet" href="{% static 'styles/passenger/04.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/passenger/04.css' %}">
+  <link rel="stylesheet" href="{% static 'styles/passenger/05.css' %}">
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    rel="stylesheet"
+  >
   
-  <style>
-
-  </style>
 </head>
 
 <body>
 
 <!-- SHARED HEADER -->
 {% include "passenger/header.html" %}
-c
 <!-- HERO -->
 <section class="queue-hero">
   <div class="container">
@@ -57,7 +58,6 @@ c
           <i class="bi bi-list-ul"></i>
           <span>Vehicle Queue</span>
         </div>
-
         <form method="get" class="table-toolbar__filter">
           <i class="bi bi-funnel"></i>
           <select name="route" onchange="this.form.submit()">
@@ -72,65 +72,58 @@ c
         </form>
       </div>
 
-      {% if queue_entries %}
         <!-- DESKTOP TABLE (hidden on mobile) -->
         <table>
           <thead>
-            <tr>
-              <th>#</th>
-              <th>Vehicle</th>
-              <th>Route</th>
-              <th>Driver</th>
-              <th>Status</th>
-              <th>Departure</th>
-              <th>Countdown</th>
-            </tr>
+        <tr>
+          <th>Entry Time</th>
+          <th>Vehicle</th>
+          <th>Route</th>
+          <th>Driver</th>
+          <th>Status</th>
+          <th>Departure</th>
+          <th>Countdown</th>
+        </tr>
           </thead>
 
-          <tbody>
+        <tbody id="queueTableBody">
             {% for q in queue_entries %}
-            <tr class="{% if not q.is_active %}departed-row{% endif %}">
-              <td><strong>{{ forloop.counter }}</strong></td>
+            <tr class="{% if q.status == 'Departed' %}departed-row{% endif %}">
+            <td class="entry-time-cell">{{ q.entry_time_numeric }}</td>
 
-              <td>{{ q.vehicle.license_plate }}</td>
+            <td>
+              {% if q.vehicle_plate != "—" %}
+                {{ q.vehicle_plate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
 
               <td>
                 <span class="route-badge">{{ q.route }}</span>
               </td>
 
               <td>
-                {{ q.driver.first_name }} {{ q.driver.last_name }}
+                {{ q.driver_name }}
               </td>
 
               <td>
-                {% if q.is_active %}
-                  <span class="status active">Boarding</span>
-                {% else %}
-                  <span class="status departed">Departed</span>
-                {% endif %}
+                <span class="status-pill status-pill-{{ q.status|lower }}">
+                  {{ q.status }}
+                </span>
               </td>
 
-              <!-- ✅ FIXED DEPARTURE COLUMN -->
-              <td>
-                {% if q.departed_at %}
-                  {{ q.departed_at|date:"M d, Y h:i A" }}
-                {% else %}
-                  {{ q.expiry_time|date:"M d, Y h:i A" }}
-                {% endif %}
-              </td>
+              <td>{{ q.departure_time_display }}</td>
 
-              <!-- ✅ REAL-TIME COUNTDOWN -->
               <td>
-                {% if q.is_expired %}
-                  <span class="badge bg-danger">Time Expired</span>
-                {% elif not q.is_active %}
-                  <span class="badge bg-secondary">Departed</span>
-                {% else %}
-                  <!-- Simplified data attribute -->
-                  <span class="countdown" 
-                        data-expiry="{{ q.expiry_time|date:'U' }}">
+                {% if q.countdown_active %}
+                  <span class="countdown" data-expiry="{{ q.expiry_timestamp }}">
                     --
                   </span>
+                {% elif q.status == "Queued" %}
+                  <span class="badge bg-secondary">Queued</span>
+                {% else %}
+                  <span class="badge bg-danger">Departed</span>
                 {% endif %}
               </td>
 
@@ -139,107 +132,96 @@ c
           </tbody>
         </table>
         
-        <!-- MOBILE CARDS (hidden on desktop) -->
-        <div class="mobile-cards-container">
-          {% for q in queue_entries %}
-          <div class="vehicle-card" data-expiry="{{ q.expiry_time|date:'U' }}">
-            <!-- CARD HEADER -->
-            <div class="card-header">
-              <div class="card-number">{{ forloop.counter }}</div>
-              <div class="card-plate">
-                <i class="bi bi-truck"></i> {{ q.vehicle.license_plate }}
-              </div>
-            </div>
-            
-            <!-- CARD DETAILS -->
-            <div class="card-details">
-              <!-- ROUTE -->
-              <div class="detail-row">
-                <div class="detail-icon">
-                  <i class="bi bi-signpost"></i>
-                </div>
-                <div class="detail-content">
-                  <div class="detail-label">Route</div>
-                  <div class="route-tag">{{ q.route }}</div>
-                </div>
-              </div>
-              
-              <!-- DRIVER -->
-              <div class="detail-row">
-                <div class="detail-icon">
-                  <i class="bi bi-person-badge"></i>
-                </div>
-                <div class="detail-content">
-                  <div class="detail-label">Driver</div>
-                  <div class="detail-value">{{ q.driver.first_name }} {{ q.driver.last_name }}</div>
-                </div>
-              </div>
-              
-              <!-- DEPARTURE TIME -->
-              <div class="detail-row">
-                <div class="detail-icon">
-                  <i class="bi bi-clock"></i>
-                </div>
-                <div class="detail-content">
-                  <div class="detail-label">Departure Time</div>
-                  <div class="detail-value">
-                    {% if q.departed_at %}
-                      {{ q.departed_at|date:"M d, Y h:i A" }}
-                    {% else %}
-                      {{ q.expiry_time|date:"M d, Y h:i A" }}
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- CARD FOOTER -->
-            <div class="card-footer">
-              <!-- STATUS -->
-              <div>
-                {% if q.is_active %}
-                  <span class="status-badge-mobile status-active-mobile">
-                    <i class="bi bi-people-fill"></i> Boarding
-                  </span>
-                {% else %}
-                  <span class="status-badge-mobile status-departed-mobile">
-                    <i class="bi bi-check-circle-fill"></i> Departed
-                  </span>
-                {% endif %}
-              </div>
-              
-              <!-- COUNTDOWN/TIMER -->
-              <div>
-                {% if q.is_expired %}
-                  <span class="expired-badge-mobile">
-                    <i class="bi bi-exclamation-triangle-fill"></i> Expired
-                  </span>
-                {% elif not q.is_active %}
-                  <span class="departed-badge-mobile">
-                    <i class="bi bi-check-circle"></i> Departed
-                  </span>
-                {% else %}
-                  <span class="countdown-mobile countdown-mobile-element" 
-                        data-expiry="{{ q.expiry_time|date:'U' }}">
-                    --
-                  </span>
-                {% endif %}
-              </div>
-            </div>
+<!-- MOBILE CARDS (hidden on desktop) -->
+<div class="mobile-cards-container">
+  {% for q in queue_entries %}
+  <div class="vehicle-card"{% if q.countdown_active %} data-expiry="{{ q.expiry_timestamp }}"{% endif %}>
+    
+    <!-- CARD HEADER: Vehicle & Status -->
+    <div class="card-header">
+      <div class="vehicle-info">
+        <div class="vehicle-icon">
+          <i class="bi bi-truck"></i>
+        </div>
+        <div class="vehicle-details">
+          <div class="vehicle-plate">
+            {% if q.vehicle_plate != "—" %}
+              {{ q.vehicle_plate }}
+            {% else %}
+              Unassigned
+            {% endif %}
           </div>
-          {% endfor %}
+          <div class="driver-name">{{ q.driver_name }}</div>
         </div>
-      {% else %}
-        <div class="p-5 text-center text-muted">
-          <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-          No vehicles currently scheduled.
-        </div>
-      {% endif %}
+      </div>
+      <span class="status-pill status-pill-{{ q.status|lower }}">
+        {{ q.status }}
+      </span>
     </div>
+    
+    <!-- CARD BODY: Key Information -->
+    <div class="card-body">
+      
+      <!-- Route Information -->
+      <div class="info-section">
+        <div class="info-label">
+          <i class="bi bi-signpost"></i>
+          <span>Route</span>
+        </div>
+        <div class="route-tag">{{ q.route }}</div>
+      </div>
+      
+      <!-- Times Row -->
+      <div class="times-grid">
+        <div class="time-item">
+          <div class="time-label">
+            <i class="bi bi-clock"></i>
+            <span>Entry</span>
+          </div>
+          <div class="time-value">{{ q.entry_time_display }}</div>
+        </div>
+        <div class="time-item">
+          <div class="time-label">
+            <i class="bi bi-calendar2-check"></i>
+            <span>Departure</span>
+          </div>
+          <div class="time-value">{{ q.departure_time_display }}</div>
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- CARD FOOTER: Countdown -->
+    <div class="card-footer">
+      <div class="countdown-section">
+        <div class="countdown-label">
+          <i class="bi bi-stopwatch"></i>
+          <span>Countdown</span>
+        </div>
+        <div class="countdown-timer">
+          {% if q.countdown_active %}
+            <span class="countdown-mobile countdown-mobile-element" 
+                  data-expiry="{{ q.expiry_timestamp }}">
+              --
+            </span>
+          {% elif q.status == "Queued" %}
+            <span class="queued-badge">Waiting in line</span>
+          {% else %}
+            <span class="departed-badge">
+              <i class="bi bi-check-circle"></i> Departed
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  {% endfor %}
+</div>
 
-    <div class="queue-footnote">
-      <i class="bi bi-arrow-repeat"></i>
-      Auto-refreshing every 15 seconds
+    <div class="p-5 text-center text-muted {% if queue_entries %}d-none{% endif %}" id="queueEmptyState">
+      <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+      No vehicles currently scheduled.
     </div>
   </div>
 </section>
@@ -250,30 +232,17 @@ c
      REAL-TIME COUNTDOWN SCRIPT
 ================================ -->
 <script>
+let queueServerOffset = 0;
 (function () {
-  // Calculate server time from expiry timestamps
-  function getServerTimeOffset() {
-    const countdownElements = document.querySelectorAll('.countdown, .countdown-mobile-element');
-    if (countdownElements.length === 0) return 0;
-    
-    const firstEl = countdownElements[0];
-    const expiryTimestamp = parseInt(firstEl.dataset.expiry, 10);
-    const clientTimestamp = Math.floor(Date.now() / 1000);
-    
-    return 0; // Default offset
-  }
-  
-  const timeOffset = getServerTimeOffset();
-  
   function formatTime(seconds) {
     if (seconds <= 0) {
       return '00:00';
     }
-    
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -281,94 +250,234 @@ c
   }
 
   function updateAllCountdowns() {
-    const now = Math.floor(Date.now() / 1000) - timeOffset;
-    
-    // Update desktop table countdowns
+    const now = Math.floor(Date.now() / 1000) - queueServerOffset;
+
     document.querySelectorAll('.countdown').forEach(el => {
       const expiryTimestamp = parseInt(el.dataset.expiry, 10);
       if (isNaN(expiryTimestamp)) return;
-      
+
       const remaining = expiryTimestamp - now;
-      
+
       if (remaining <= 0) {
         el.innerHTML = '<span class="badge bg-danger">Time Expired</span>';
         const row = el.closest('tr');
-        if (row && !row.classList.contains('departed-row')) {
-          const statusCell = row.querySelector('.status.active');
-          if (statusCell) {
-            statusCell.textContent = 'Departed';
-            statusCell.classList.remove('active');
-            statusCell.classList.add('departed');
+        if (row) {
+          row.classList.add('departed-row');
+          const label = row.querySelector('.status-pill');
+          if (label) {
+            label.textContent = 'Departed';
+            label.classList.remove('status-pill-boarding', 'status-pill-queued');
+            label.classList.add('status-pill-departed');
+          }
+        }
+        const card = el.closest('.vehicle-card');
+        if (card) {
+          card.classList.add('departed-row');
+          const label = card.querySelector('.status-pill');
+          if (label) {
+            label.textContent = 'Departed';
+            label.classList.remove('status-pill-boarding', 'status-pill-queued');
+            label.classList.add('status-pill-departed');
           }
         }
         return;
       }
-      
+
       el.textContent = formatTime(remaining);
       el.classList.remove('text-danger');
-      
+
       if (remaining < 300) {
         el.classList.add('text-danger');
       }
     });
-    
-    // Update mobile card countdowns
+
     document.querySelectorAll('.countdown-mobile-element').forEach(el => {
       const expiryTimestamp = parseInt(el.dataset.expiry, 10);
       if (isNaN(expiryTimestamp)) return;
-      
+
       const remaining = expiryTimestamp - now;
-      
+
       if (remaining <= 0) {
-        el.className = 'expired-badge-mobile';
+        el.className = 'badge bg-danger';
         el.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Expired';
         return;
       }
-      
+
       el.textContent = formatTime(remaining);
       el.classList.remove('countdown-danger');
-      
+
       if (remaining < 300) {
         el.classList.add('countdown-danger');
       }
     });
-    
-    // Schedule next update
+
     requestAnimationFrame(updateAllCountdowns);
   }
 
-  // Handle responsive switching
   function handleResponsiveSwitch() {
     const isMobile = window.innerWidth <= 768;
     const cardsContainer = document.querySelector('.mobile-cards-container');
     const table = document.querySelector('table');
-    
+
     if (isMobile) {
-      // On mobile: hide table, show cards
       if (table) table.style.display = 'none';
       if (cardsContainer) cardsContainer.style.display = 'flex';
     } else {
-      // On desktop: show table, hide cards
       if (table) table.style.display = 'table';
       if (cardsContainer) cardsContainer.style.display = 'none';
     }
   }
 
-  // Initialize everything when page loads
   document.addEventListener('DOMContentLoaded', function() {
-    // Start countdowns
     updateAllCountdowns();
-    
-    // Handle responsive switching
     handleResponsiveSwitch();
     window.addEventListener('resize', handleResponsiveSwitch);
   });
 
-  // Auto-refresh the page every 60 seconds to sync with server data
-  setTimeout(function() {
-    window.location.reload();
-  }, 60000);
+})();
+</script>
+<script>
+(function() {
+  const queueApiUrl = "{% url 'passenger:public_queue_data' %}";
+  const routeFilter = "{{ selected_route|default:'all' }}";
+  const tableBody = document.getElementById("queueTableBody");
+  const mobileContainer = document.getElementById("mobileQueueCards");
+  const emptyState = document.getElementById("queueEmptyState");
 
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = value ?? "";
+    return div.innerHTML;
+  }
+
+  function statusClass(status) {
+    return (status || "idle").toLowerCase();
+  }
+
+  function buildRow(entry) {
+    const statusName = statusClass(entry.status);
+    const countdownHtml = entry.countdown_active
+      ? `<span class="countdown" data-expiry="${entry.expiry_timestamp}">--</span>`
+      : entry.status === "Queued"
+        ? '<span class="text-muted small">Waiting in line</span>'
+        : '<span class="badge bg-danger">Departed</span>';
+
+    return `
+      <tr class="${entry.status === "Departed" ? "departed-row" : ""}">
+        <td class="entry-time-cell">${escapeHtml(entry.entry_time_numeric)}</td>
+        <td>${escapeHtml(entry.vehicle_plate)}</td>
+        <td><span class="route-badge">${escapeHtml(entry.route)}</span></td>
+        <td>${escapeHtml(entry.driver_name)}</td>
+        <td>
+          <span class="status-pill status-pill-${statusName}">
+            ${escapeHtml(entry.status)}
+          </span>
+        </td>
+        <td>${escapeHtml(entry.entry_time_display)}</td>
+        <td>${countdownHtml}</td>
+      </tr>`;
+  }
+
+  function buildCard(entry) {
+    const statusName = statusClass(entry.status);
+    const countdownHtml = entry.countdown_active
+      ? `<span class="countdown-mobile countdown-mobile-element" data-expiry="${entry.expiry_timestamp}">--</span>`
+      : entry.status === "Queued"
+        ? '<span class="text-muted small">Waiting in line</span>'
+        : '<span class="badge bg-danger">Departed</span>';
+
+    return `
+      <div class="vehicle-card"${entry.countdown_active ? ` data-expiry="${entry.expiry_timestamp}"` : ""}>
+        <div class="card-header">
+          <div class="card-plate">
+            <i class="bi bi-truck"></i> ${escapeHtml(entry.vehicle_plate)}
+          </div>
+          <span class="status-pill status-pill-${statusName}">
+            ${escapeHtml(entry.status)}
+          </span>
+        </div>
+        <div class="card-details">
+          <div class="detail-row">
+            <div class="detail-icon">
+              <i class="bi bi-calendar"></i>
+            </div>
+            <div class="detail-content">
+              <div class="detail-label">Entry Time</div>
+              <div class="detail-value">${escapeHtml(entry.entry_time_numeric)}</div>
+            </div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-icon">
+              <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="detail-content">
+              <div class="detail-label">Departure Time</div>
+              <div class="detail-value">${escapeHtml(entry.departure_time_display)}</div>
+            </div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-icon">
+              <i class="bi bi-signpost"></i>
+            </div>
+            <div class="detail-content">
+              <div class="detail-label">Route</div>
+              <div class="route-tag">${escapeHtml(entry.route)}</div>
+            </div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-icon">
+              <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="detail-content">
+              <div class="detail-label">Driver</div>
+              <div class="detail-value">${escapeHtml(entry.driver_name)}</div>
+            </div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-icon">
+              <i class="bi bi-stopwatch"></i>
+            </div>
+            <div class="detail-content">
+              <div class="detail-label">Countdown</div>
+              <div class="detail-value">${countdownHtml}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderQueue(entries) {
+    if (!tableBody || !mobileContainer) return;
+
+    tableBody.innerHTML = entries.map(buildRow).join("");
+    mobileContainer.innerHTML = entries.map(buildCard).join("");
+    emptyState.classList.toggle("d-none", entries.length > 0);
+    const tableElement = tableBody.closest("table");
+    if (tableElement) {
+      tableElement.classList.toggle("d-none", entries.length === 0);
+    }
+    mobileContainer.classList.toggle("d-none", entries.length === 0);
+  }
+
+  function fetchQueueData() {
+    const url = new URL(queueApiUrl, window.location.origin);
+    if (routeFilter) {
+      url.searchParams.set("route", routeFilter);
+    }
+
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        queueServerOffset = Math.floor(Date.now() / 1000) - (data.server_time || 0);
+        renderQueue(data.entries || []);
+      })
+      .catch(() => {});
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    fetchQueueData();
+    setInterval(fetchQueueData, 10000);
+  });
 })();
 </script>
 

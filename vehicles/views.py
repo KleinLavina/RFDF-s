@@ -744,5 +744,5 @@ def queue_history(request):
     history = QueueHistory.objects.select_related('vehicle', 'driver').order_by('-timestamp')
     paginator = Paginator(history, 20)
     page = paginator.get_page(request.GET.get('page'))
-    return render(request, 'terminal/queue_history.html', {'page_obj': page})
+    return redirect('terminal:transactions')
 

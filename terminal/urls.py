@@ -5,6 +5,8 @@ app_name = 'terminal'
 
 urlpatterns = [
     path('deposit-menu/', views.deposit_menu, name='deposit_menu'),
+    path('deposit-history/', views.deposit_history, name='deposit_history'),
+    path('transactions/', views.transactions_view, name='transactions'),
     path('queue/', views.terminal_queue, name='terminal_queue'),
     path('queue-data/', views.queue_data, name='queue_data'),
     path('manage-queue/', views.manage_queue, name='manage_queue'),

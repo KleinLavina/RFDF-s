@@ -1,15 +1,18 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from vehicles.models import Vehicle, VehicleBalanceBase
 
 
-class TerminalFeeBalance(models.Model):
+class TerminalFeeBalance(VehicleBalanceBase):
     vehicle = models.OneToOneField(
-        'vehicles.Vehicle',
+        Vehicle,
         on_delete=models.CASCADE,
         related_name='fee_balance'
     )
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def clean(self):
         if self.balance < 0:
@@ -48,6 +51,13 @@ class EntryLog(models.Model):
         related_name='terminal_actions'
     )
     fee_charged = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    wallet_balance_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Wallet balance snapshot at the time the entry log was created.",
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_FAILED)
     message = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -95,3 +105,11 @@ class SystemSettings(models.Model):
     def get_solo(cls):
         obj, _ = cls.objects.get_or_create(id=1)
         return obj
+
+
+@receiver(post_save, sender=Vehicle)
+def create_terminal_fee_balance(sender, instance, created, **kwargs):
+    if created:
+        TerminalFeeBalance.objects.create(vehicle=instance)
+    else:
+        TerminalFeeBalance.objects.get_or_create(vehicle=instance)

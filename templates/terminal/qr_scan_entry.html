@@ -88,8 +88,32 @@
 }
 
 /* SCANNER */
+#rdfsQrScannerWrap{position:relative;}
 #rdfsQrReader{
   background:#111827;
+}
+
+#rdfsQrResetCooldown{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,.95);
+  text-align:center;
+  padding:1rem;
+  font-weight:700;
+  color:#b45309;
+  font-size:1rem;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(15,23,42,.2);
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .2s ease;
+}
+
+.rdfs-qr-reset-active #rdfsQrResetCooldown{
+  opacity:1;
 }
 
 /* FEEDBACK */
@@ -174,14 +198,24 @@
       </p>
 
       <!-- SCANNER -->
-      <div id="rdfsQrReader"
+      <div id="rdfsQrScannerWrap"
            class="rounded mb-3"
            style="width:100%;max-width:400px;margin:auto;">
+        <div id="rdfsQrReader"></div>
+        <div id="rdfsQrResetCooldown" class="d-none">
+          <div>
+            You're already queued. Scan again after the cooldown to confirm a reset without an extra fee.
+          </div>
+        </div>
       </div>
 
       <!-- FEEDBACK -->
       <div id="rdfsQrFeedback"
            class="alert d-none mt-3 rdfs-qr-feedback">
+      </div>
+      <div id="rdfsQrResetHint"
+           class="small text-warning mt-2 d-none">
+        You're already in the queue. Scan again to reset your spot without another fee.
       </div>
 
       <!-- CSRF -->
@@ -202,6 +236,13 @@ const ok=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobbl
 const err=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
 let paused=false;
+let awaitingReset=false;
+let queuedQr="";
+let queueResetCooldown=false;
+let last="";
+const resetHint=document.getElementById("rdfsQrResetHint");
+const resetOverlay=document.getElementById("rdfsQrResetCooldown");
+const scannerWrap=document.getElementById("rdfsQrScannerWrap");
 
 function show(msg,type="info"){
   const fb=document.getElementById("rdfsQrFeedback");
@@ -209,10 +250,11 @@ function show(msg,type="info"){
 
   fb.className="alert mt-3 rdfs-qr-feedback";
   fb.textContent=msg;
-  fb.classList.remove("d-none","alert-success","alert-danger","alert-info");
+  fb.classList.remove("d-none","alert-success","alert-danger","alert-info","alert-warning");
 
   if(type==="success") fb.classList.add("alert-success");
   else if(type==="danger") fb.classList.add("alert-danger");
+  else if(type==="warning") fb.classList.add("alert-warning");
   else fb.classList.add("alert-info");
 
   scope.classList.remove("rdfs-flash-success","rdfs-flash-error");
@@ -220,35 +262,101 @@ function show(msg,type="info"){
   if(type==="danger"){scope.classList.add("rdfs-flash-error");err.play().catch(()=>{});}
 }
 
+function toggleResetHint(showHint){
+  if(!resetHint) return;
+  resetHint.classList.toggle("d-none",!showHint);
+}
+
+function toggleResetCooldownOverlay(show){
+  if(!resetOverlay || !scannerWrap) return;
+  resetOverlay.classList.toggle("d-none",!show);
+  scannerWrap.classList.toggle("rdfs-qr-reset-active", show);
+}
+
+function startResetCooldown(){
+  queueResetCooldown=true;
+  toggleResetCooldownOverlay(true);
+  setTimeout(()=>{
+    queueResetCooldown=false;
+    toggleResetCooldownOverlay(false);
+  },2000);
+}
+
 async function postQR(qr){
   try{
+    if(awaitingReset && queuedQr && queuedQr!==qr){
+      awaitingReset=false;
+      queuedQr="";
+      toggleResetHint(false);
+    }
+
+    if(awaitingReset && queueResetCooldown && queuedQr===qr){
+      show("⏳ Hold on 2 seconds before confirming your reset.","warning");
+      return;
+    }
+    const payload=new URLSearchParams({qr_code:qr});
+    if(awaitingReset && queuedQr===qr){
+      payload.append("confirm_reset","1");
+    }
+
     const r=await fetch("{% url 'terminal:qr_scan_entry' %}",{
       method:"POST",
       headers:{
         "X-CSRFToken":document.querySelector('[name=csrfmiddlewaretoken]').value,
         "X-Requested-With":"XMLHttpRequest"
       },
-      body:new URLSearchParams({qr_code:qr})
+      body:payload
     });
     const d=await r.json();
-    d.status==="success"?show(d.message,"success"):show(d.message,"danger");
-    pause(d.status==="success"?4000:3000);
-  }catch{show("Network error","danger");}
+
+    if(d.status==="success"){
+      awaitingReset=false;
+      queuedQr="";
+      toggleResetHint(false);
+      toggleResetCooldownOverlay(false);
+      show(d.message,"success");
+    }else if(d.status==="queued"){
+      awaitingReset=true;
+      queuedQr=qr;
+      toggleResetHint(true);
+      startResetCooldown();
+      show(d.message,"warning");
+    }else{
+      awaitingReset=false;
+      queuedQr="";
+      toggleResetHint(false);
+      toggleResetCooldownOverlay(false);
+      show(d.message,"danger");
+    }
+
+    const pauseMs=d.status==="success"?4000:d.status==="queued"?0:3000;
+    if(pauseMs>0) pause(pauseMs);
+  }catch{
+    awaitingReset=false;
+    queuedQr="";
+    toggleResetHint(false);
+    show("Network error","danger");
+  }
 }
 
 function pause(ms){
   paused=true;
-  setTimeout(()=>{paused=false;show("Ready for next scan","info");},ms);
+  setTimeout(()=>{
+    paused=false;
+    last="";
+    show("Ready for next scan","info");
+  },ms);
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
   const qr=new Html5Qrcode("rdfsQrReader");
-  let last="";
   qr.start({facingMode:"environment"},{fps:10,qrbox:250},txt=>{
-    if(paused||txt===last) return;
+    if(paused||(txt===last&&!awaitingReset)) return;
     last=txt;
     postQR(txt);
-  }).catch(e=>show("Camera error: "+e,"danger"));
+  }).catch(e=>{
+    show("Camera error: "+e,"danger");
+  });
 });
 </script>
 
