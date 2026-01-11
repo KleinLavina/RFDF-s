@@ -14,6 +14,8 @@ from accounts.utils import is_staff_admin_or_admin, is_admin   # ✅ imported sh
 from pytz import timezone as pytz_timezone
 from django.db.models import Q
 from django.utils.text import slugify
+from django.db.models import Max, Sum, Count, F, Q
+
 
 # Default delete window (minutes) for cleanup of old logs (tweakable)
 DEFAULT_DELETE_AFTER_MINUTES = 10
@@ -68,20 +70,26 @@ def deposit_menu(request):
         end_date = request.GET.get("end_date", "")
         vehicle_plate = request.GET.get("vehicle_plate", "")
 
-        # 🟢 If NO filters → show TODAY by default
-        if not start_date and not end_date and not vehicle_plate:
-            today = timezone.localdate()
-            deposits = deposits.filter(created_at__date=today)
-            start_date = today.isoformat()
-            end_date = today.isoformat()
+        # 🟡 Apply filters only if provided
+        if start_date:
+            deposits = deposits.filter(created_at__date__gte=start_date)
+        if end_date:
+            deposits = deposits.filter(created_at__date__lte=end_date)
+        if vehicle_plate:
+            deposits = deposits.filter(wallet__vehicle__license_plate__icontains=vehicle_plate)
+
+        history_sort = request.GET.get("history_sort", "newest").lower()
+        if history_sort not in ("newest", "largest", "smallest", "all"):
+            history_sort = "newest"
+
+        if history_sort == "largest":
+            history_ordering = ["-amount", "-created_at"]
+        elif history_sort == "smallest":
+            history_ordering = ["amount", "-created_at"]
         else:
-            # 🟡 Apply filters only if provided
-            if start_date:
-                deposits = deposits.filter(created_at__date__gte=start_date)
-            if end_date:
-                deposits = deposits.filter(created_at__date__lte=end_date)
-            if vehicle_plate:
-                deposits = deposits.filter(wallet__vehicle__license_plate__icontains=vehicle_plate)
+            history_ordering = ["-created_at"]
+
+        deposits = deposits.order_by(*history_ordering)
 
         context = {
             "role": "admin",
@@ -90,6 +98,8 @@ def deposit_menu(request):
             "end_date": end_date,
             "vehicle_plate": vehicle_plate,
             "min_deposit": min_deposit,
+            "history_deposits": deposits[:200],
+            "history_sort": history_sort,
         }
         return render(request, "terminal/deposit_menu.html", context)
 
@@ -102,9 +112,19 @@ def deposit_menu(request):
 
     # 🟢 Staff always sees TODAY'S deposits by default
     today = timezone.localdate()
-    recent_deposits = deposits.filter(
-        created_at__date=today
-    )[:10]
+    history_sort = request.GET.get("history_sort", "newest").lower()
+    if history_sort not in ("newest", "largest", "smallest", "all"):
+        history_sort = "newest"
+
+    if history_sort == "largest":
+        history_ordering = ["-amount", "-created_at"]
+    elif history_sort == "smallest":
+        history_ordering = ["amount", "-created_at"]
+    else:
+        history_ordering = ["-created_at"]
+
+    history_qs = deposits.order_by(*history_ordering)
+    recent_deposits = history_qs[:10]
 
     # -------------------------------
     # Handle POST deposit submission
@@ -142,6 +162,11 @@ def deposit_menu(request):
         "role": "staff_admin",
         "drivers": drivers_with_vehicles,
         "recent_deposits": recent_deposits,
+        "history_deposits": history_qs[:200],
+        "start_date": "",
+        "end_date": "",
+        "vehicle_plate": "",
+        "history_sort": history_sort,
         "context_message": "" if drivers_with_vehicles.exists() else "No registered drivers with vehicles found. Please register a vehicle first.",
         "min_deposit": min_deposit,
     }
