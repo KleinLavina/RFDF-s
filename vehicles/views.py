@@ -6,6 +6,7 @@ import pytesseract
 import re
 import json
 from decimal import Decimal
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -17,13 +18,86 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum
 from django.utils import timezone
+from django.template.loader import render_to_string
 
 from accounts.utils import is_staff_admin_or_admin, is_admin
 from .models import Driver, Vehicle, Wallet, Deposit, QueueHistory
-from .forms import DriverRegistrationForm, VehicleRegistrationForm
+from .forms import DriverRegistrationForm, DriverEditForm, VehicleRegistrationForm
 
 # ✅ Path for your installed Tesseract OCR (adjust if needed)
 pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+
+DRIVER_EDIT_FIELD_ORDER = [
+    'first_name', 'middle_name', 'last_name', 'suffix',
+    'birth_date', 'birth_place', 'blood_type',
+    'mobile_number', 'email',
+    'street', 'barangay', 'zip_code',
+    'city_municipality', 'province',
+    'license_number', 'license_expiry',
+    'emergency_contact_name', 'emergency_contact_number', 'emergency_contact_relationship',
+    'driver_photo'
+]
+
+DRIVER_EDIT_ICON_MAP = {
+    'first_name': 'fa-user',
+    'middle_name': 'fa-user-pen',
+    'last_name': 'fa-user',
+    'suffix': 'fa-id-badge',
+    'birth_date': 'fa-cake-candles',
+    'birth_place': 'fa-map-marker-alt',
+    'blood_type': 'fa-heart',
+    'mobile_number': 'fa-phone',
+    'email': 'fa-envelope',
+    'street': 'fa-road',
+    'barangay': 'fa-city',
+    'zip_code': 'fa-mail-bulk',
+    'city_municipality': 'fa-building',
+    'province': 'fa-flag',
+    'license_number': 'fa-id-card',
+    'license_expiry': 'fa-calendar-check',
+    'emergency_contact_name': 'fa-handshake',
+    'emergency_contact_number': 'fa-phone-alt',
+    'emergency_contact_relationship': 'fa-people-group',
+    'driver_photo': 'fa-camera'
+}
+
+DRIVER_EDIT_SPANS = {
+    'street': 2,
+    'driver_photo': 2,
+    'license_number': 2,
+    'emergency_contact_name': 2,
+}
+
+VEHICLE_EDIT_FIELD_ORDER = [
+    'vehicle_name', 'vehicle_type', 'ownership_type',
+    'assigned_driver', 'route',
+    'cr_number', 'or_number', 'vin_number', 'year_model',
+    'registration_number', 'registration_expiry', 'license_plate',
+    'seat_capacity'
+]
+
+VEHICLE_EDIT_ICON_MAP = {
+    'vehicle_name': 'fa-car',
+    'vehicle_type': 'fa-car-side',
+    'ownership_type': 'fa-handshake',
+    'assigned_driver': 'fa-user-tie',
+    'route': 'fa-route',
+    'cr_number': 'fa-file-signature',
+    'or_number': 'fa-receipt',
+    'vin_number': 'fa-barcode',
+    'year_model': 'fa-calendar-alt',
+    'registration_number': 'fa-id-badge',
+    'registration_expiry': 'fa-calendar-check',
+    'license_plate': 'fa-hashtag',
+    'seat_capacity': 'fa-users'
+}
+
+VEHICLE_EDIT_SPANS = {
+    'vehicle_name': 2,
+    'assigned_driver': 2,
+    'seat_capacity': 1,
+}
+
 
 def format_form_errors(form, form_type="Form"):
     """
@@ -57,6 +131,92 @@ def format_form_errors(form, form_type="Form"):
                 error_list.append(f"❌ {field_label}: {error}")
     
     return error_list
+
+
+def _is_plate_duplicate_message(text):
+    if not text:
+        return False
+    normalized = str(text).lower()
+
+    contains_plate_key = 'license_plate' in normalized or 'plate' in normalized
+    if not contains_plate_key:
+        return False
+
+    duplicate_indicators = [
+        'already registered',
+        'already exists',
+        'duplicate',
+        'duplicate key',
+        'unique constraint failed',
+        'plate already exists',
+        'already taken',
+        'license plate already exists'
+    ]
+    return any(indicator in normalized for indicator in duplicate_indicators)
+
+
+def _build_form_field_rows(form, field_order, icon_map, span_map):
+    for field_obj in form.fields.values():
+        classes = field_obj.widget.attrs.get('class', '')
+        extras = " ".join(filter(None, [classes, "rdfs-edit-input"]))
+        field_obj.widget.attrs['class'] = extras
+
+    rows = []
+    for field_name in field_order:
+        if field_name in form.fields:
+            rows.append({
+                'field': form[field_name],
+                'icon': icon_map.get(field_name, 'fa-circle-info'),
+                'span': span_map.get(field_name, 1),
+            })
+    return rows
+
+
+def _render_driver_edit_partial(request, form, driver):
+    context = {
+        'form': form,
+        'driver': driver,
+        'field_rows': _build_form_field_rows(
+            form,
+            DRIVER_EDIT_FIELD_ORDER,
+            DRIVER_EDIT_ICON_MAP,
+            DRIVER_EDIT_SPANS
+        ),
+    }
+    return render_to_string('vehicles/includes/driver_edit_form.html', context, request=request)
+
+
+def _render_vehicle_edit_partial(request, form, vehicle):
+    context = {
+        'form': form,
+        'vehicle': vehicle,
+        'field_rows': _build_form_field_rows(
+            form,
+            VEHICLE_EDIT_FIELD_ORDER,
+            VEHICLE_EDIT_ICON_MAP,
+            VEHICLE_EDIT_SPANS
+        ),
+    }
+    return render_to_string('vehicles/includes/vehicle_edit_form.html', context, request=request)
+
+
+def maybe_show_plate_duplicate_toast(request, form=None, error=None):
+    if getattr(request, "_plate_duplicate_message_shown", False):
+        return False
+
+    candidates = []
+    if form is not None:
+        candidates.extend(form.errors.get('license_plate', []))
+    if error is not None:
+        candidates.append(str(error))
+
+    for candidate in candidates:
+        if _is_plate_duplicate_message(candidate):
+            messages.error(request, "Plate number already exists.")
+            request._plate_duplicate_message_shown = True
+            return True
+
+    return False
 # -------------------------
 # OCR ENDPOINT
 # -------------------------
@@ -147,10 +307,15 @@ def staff_dashboard(request):
                     return redirect('staff_dashboard')
                 except ValidationError as ve:
                     vehicle_form.add_error(None, ve)
+                    maybe_show_plate_duplicate_toast(request, error=ve)
                     messages.error(request, "❌ Invalid vehicle data.")
+                except IntegrityError as ie:
+                    if not maybe_show_plate_duplicate_toast(request, error=ie):
+                        messages.error(request, f"❌ Database error: {ie}")
                 except Exception as e:
                     messages.error(request, f"❌ Unexpected error: {e}")
             else:
+                maybe_show_plate_duplicate_toast(request, form=vehicle_form)
                 messages.error(request, "❌ Vehicle form contains errors.")
 
     context = {
@@ -189,10 +354,15 @@ def vehicle_registration(request):
                 return redirect('vehicles:register_vehicle')
             except ValidationError as ve:
                 form.add_error(None, ve)
+                maybe_show_plate_duplicate_toast(request, error=ve)
                 messages.error(request, "❌ Invalid vehicle data.")
+            except IntegrityError as ie:
+                if not maybe_show_plate_duplicate_toast(request, error=ie):
+                    messages.error(request, f"❌ Database error: {ie}")
             except Exception as e:
                 messages.error(request, f"❌ Unexpected error: {e}")
         else:
+            maybe_show_plate_duplicate_toast(request, form=form)
             messages.error(request, "❌ Please correct the errors.")
 
     vehicles = Vehicle.objects.select_related('assigned_driver', 'route').all().order_by('-date_registered')
@@ -327,6 +497,39 @@ def register_driver(request):
 
 @login_required
 @user_passes_test(is_staff_admin_or_admin)
+def driver_edit_form(request, driver_id):
+    driver = get_object_or_404(Driver, pk=driver_id)
+    form = DriverEditForm(instance=driver)
+    html = _render_driver_edit_partial(request, form, driver)
+    return JsonResponse({'html': html})
+
+
+@login_required
+@user_passes_test(is_staff_admin_or_admin)
+def edit_driver(request, driver_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=405)
+
+    driver = get_object_or_404(Driver, pk=driver_id)
+    form = DriverEditForm(request.POST, request.FILES, instance=driver)
+
+    if form.is_valid():
+        try:
+            form.save()
+        except IntegrityError as ie:
+            form.add_error(None, str(ie))
+        except ValidationError as ve:
+            form.add_error(None, ve)
+        else:
+            messages.success(request, "✅ Driver details updated successfully.")
+            return JsonResponse({'success': True})
+
+    html = _render_driver_edit_partial(request, form, driver)
+    return JsonResponse({'success': False, 'html': html})
+
+
+@login_required
+@user_passes_test(is_staff_admin_or_admin)
 def register_vehicle(request):
     """
     Register a new vehicle with comprehensive error handling.
@@ -382,6 +585,7 @@ def register_vehicle(request):
                 
             except ValidationError as ve:
                 # Model-level validation errors
+                maybe_show_plate_duplicate_toast(request, error=ve)
                 if hasattr(ve, 'message_dict'):
                     for field, errors in ve.message_dict.items():
                         field_label = field.replace('_', ' ').title()
@@ -394,6 +598,10 @@ def register_vehicle(request):
                 else:
                     messages.error(request, f"❌ Validation Error: {str(ve)}")
                     
+            except IntegrityError as ie:
+                if not maybe_show_plate_duplicate_toast(request, error=ie):
+                    messages.error(request, f"❌ Database error: {ie}")
+                
             except Exception as e:
                 # Unexpected errors
                 messages.error(
@@ -402,6 +610,7 @@ def register_vehicle(request):
                 )
         else:
             # Form validation errors - Show each error specifically
+            maybe_show_plate_duplicate_toast(request, form=form)
             error_list = format_form_errors(form, "Vehicle Registration")
             
             if error_list:
@@ -434,6 +643,44 @@ def register_vehicle(request):
     }
     
     return render(request, 'vehicles/register_vehicle.html', context)
+
+
+@login_required
+@user_passes_test(is_staff_admin_or_admin)
+def vehicle_edit_form(request, vehicle_id):
+    vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
+    form = VehicleRegistrationForm(instance=vehicle)
+    html = _render_vehicle_edit_partial(request, form, vehicle)
+    return JsonResponse({'html': html})
+
+
+@login_required
+@user_passes_test(is_staff_admin_or_admin)
+def edit_vehicle(request, vehicle_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=405)
+
+    vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
+    form = VehicleRegistrationForm(request.POST, instance=vehicle)
+
+    if form.is_valid():
+        updated_vehicle = form.save(commit=False)
+        try:
+            updated_vehicle.full_clean()
+            updated_vehicle.save()
+        except IntegrityError as ie:
+            form.add_error(None, str(ie))
+        except ValidationError as ve:
+            form.add_error(None, ve)
+        else:
+            messages.success(
+                request,
+                f"✅ Vehicle '{updated_vehicle.license_plate}' updated successfully."
+            )
+            return JsonResponse({'success': True})
+
+    html = _render_vehicle_edit_partial(request, form, vehicle)
+    return JsonResponse({'success': False, 'html': html})
 
 
 # -------------------------
@@ -636,7 +883,8 @@ def qr_entry(request):
             driver=vehicle.assigned_driver,
             action='enter',
             departure_time_snapshot=vehicle.departure_time,
-            wallet_balance_snapshot=vehicle.wallet.balance
+            wallet_balance_snapshot=vehicle.wallet.balance,
+            fee_charged=vehicle.route.base_fare if vehicle.route else None,
         )
         return JsonResponse({'success': True, 'message': f"{vehicle.license_plate} entered terminal.", 'departure_time': vehicle.departure_time})
     except Exception as e:
@@ -666,7 +914,7 @@ def qr_exit(request):
             driver=vehicle.assigned_driver,
             action='exit',
             departure_time_snapshot=vehicle.departure_time,
-            wallet_balance_snapshot=vehicle.wallet.balance
+            wallet_balance_snapshot=vehicle.wallet.balance,
         )
 
         return JsonResponse({'success': True, 'message': f"{vehicle.license_plate} departed terminal."})

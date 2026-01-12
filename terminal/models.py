@@ -76,6 +76,59 @@ class EntryLog(models.Model):
         return f"[{self.created_at:%Y-%m-%d %H:%M}] {plate or 'Unknown vehicle'} - {self.status} ({state})"
 
 
+class TerminalActivity(models.Model):
+    EVENT_ENTRY = 'enter'
+    EVENT_EXIT = 'exit'
+
+    EVENT_CHOICES = [
+        (EVENT_ENTRY, 'Entry'),
+        (EVENT_EXIT, 'Exit'),
+    ]
+
+    queue_history = models.OneToOneField(
+        "vehicles.QueueHistory",
+        on_delete=models.CASCADE,
+        related_name="terminal_activity",
+    )
+    entry_log = models.ForeignKey(
+        EntryLog,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="terminal_activities",
+    )
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="terminal_activities",
+    )
+    driver = models.ForeignKey(
+        "vehicles.Driver",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="terminal_activities",
+    )
+    route_name = models.CharField(max_length=200, default="Unassigned route")
+    event_type = models.CharField(max_length=10, choices=EVENT_CHOICES)
+    fee_charged = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    wallet_balance_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    timestamp = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} – {self.route_name} @ {self.timestamp:%Y-%m-%d %H:%M}"
+
+
 class SystemSettings(models.Model):
     terminal_fee = models.DecimalField(max_digits=10, decimal_places=2, default=50.00)
     min_deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=100.00)

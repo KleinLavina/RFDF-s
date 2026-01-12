@@ -8,7 +8,7 @@ from decimal import Decimal
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Count, DecimalField, F, Max, OuterRef, Q, Subquery, Sum
+from django.db.models import Count, F, Max, Q, Sum
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
@@ -16,288 +16,57 @@ from django.utils.text import slugify
 from django.views.decorators.cache import never_cache
 from pytz import timezone as pytz_timezone
 
+# Shared helpers
 from accounts.utils import is_staff_admin_or_admin, is_admin   # ✅ imported shared role checks
-from passenger.views import (
+from terminal.shared_queue import (
     PASSENGER_DELETE_AFTER_MINUTES,
-    DEPARTED_VISIBLE_MINUTES,
-    _build_public_queue_entries,
+    apply_entry_log_maintenance,
+    build_public_queue_entries,
 )
-from vehicles.models import Vehicle, Wallet, Driver, Deposit, Route, QueueHistory
-from .models import EntryLog, SystemSettings
+from vehicles.models import Vehicle, Wallet, Deposit, Route, QueueHistory
+from terminal.models import EntryLog, SystemSettings, TerminalActivity
+from terminal.utils import format_route_display
+from terminal.utils import format_route_display
 
 
-# Default delete window (minutes) for cleanup of old logs (tweakable)
-DEFAULT_DELETE_AFTER_MINUTES = 10
+QUICK_RANGE_LABELS = OrderedDict(
+    [
+        ("", "All history"),
+        ("today", "Present day"),
+        ("3days", "3 days after"),
+        ("7days", "7 days after"),
+        ("month", "Month after"),
+    ]
+)
 
 
-def _apply_auto_close_and_cleanup(now=None, delete_after_minutes=None):
-    """
-    Centralized maintenance for entry logs:
-    - Auto-close (is_active=False + departed_at set) any entry where created_at + departure_duration <= now.
-    - Delete old departed/non-active entries older than delete_after_minutes.
-    This uses the admin-configured SystemSettings.departure_duration_minutes as the authoritative rule.
-    """
-    now = now or timezone.now()
-    settings = SystemSettings.get_solo()
-    departure_duration = getattr(settings, "departure_duration_minutes", 30)
-
-    # 1) Auto-close active entries where created_at + departure_duration <= now
-    # Compute cutoff = now - departure_duration
-    cutoff = now - timedelta(minutes=int(departure_duration))
-    # Only affect entries that are still marked active and were created at or before cutoff
-    active_to_close = EntryLog.objects.filter(is_active=True, created_at__lte=cutoff)
-    if active_to_close.exists():
-        active_to_close.update(is_active=False, departed_at=now)
-
-    # 2) Delete departed/non-active entries older than delete_after_minutes
-    delete_after_minutes = delete_after_minutes if delete_after_minutes is not None else DEFAULT_DELETE_AFTER_MINUTES
-    delete_cutoff = now - timedelta(minutes=int(delete_after_minutes))
-    old_qs = EntryLog.objects.filter(created_at__lt=delete_cutoff).filter(Q(is_active=False) | Q(departed_at__isnull=False))
-    if old_qs.exists():
-        old_qs.delete()
+def parse_preferred_date(value, tz):
+    if not value:
+        return timezone.localtime(timezone.now(), tz).date()
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return timezone.localtime(timezone.now(), tz).date()
 
 
-# ---- Deposit menu ----
-@login_required(login_url='accounts:login')
-@user_passes_test(is_staff_admin_or_admin)
-@never_cache
-def deposit_menu(request):
-    settings = SystemSettings.get_solo()
-    min_deposit = settings.min_deposit_amount
-    wallet_search = request.GET.get("search_query", "").strip()
-    wallet_sort = request.GET.get("wallet_sort", "newest").lower()
-    if wallet_sort not in ("newest", "largest", "smallest", "driver_asc", "driver_desc"):
-        wallet_sort = "newest"
-
-    driver_qs = Driver.objects.filter(
-        vehicles__isnull=False
-    ).distinct().prefetch_related("vehicles").order_by("last_name", "first_name")
-
-    driver_options = []
-    for driver in driver_qs:
-        full_name = f"{driver.first_name} {driver.last_name}"
-        license_text = driver.license_number or driver.driver_id or ""
-        for vehicle in driver.vehicles.all():
-            driver_options.append({
-                "vehicle_id": vehicle.id,
-                "license_plate": vehicle.license_plate,
-                "driver_name": full_name,
-                "license_number": license_text,
-                "display": f"{full_name} · {vehicle.license_plate}",
-            })
-
-    wallets_qs = Wallet.objects.select_related("vehicle__assigned_driver").annotate(
-        last_deposit_amount=Subquery(
-            Deposit.objects.filter(wallet=OuterRef("pk"))
-            .order_by("-created_at")
-            .values("amount")[:1],
-            output_field=DecimalField(max_digits=12, decimal_places=2),
-        ),
-        last_deposit_at=Subquery(
-            Deposit.objects.filter(wallet=OuterRef("pk"))
-            .order_by("-created_at")
-            .values("created_at")[:1]
-        ),
-        deposit_count=Count("deposits"),
+def make_datetime_from_date(date_value, tz):
+    return timezone.make_aware(
+        datetime(date_value.year, date_value.month, date_value.day, 0, 0, 0),
+        tz,
     )
 
-    if wallet_search:
-        wallets_qs = wallets_qs.filter(
-            Q(vehicle__license_plate__icontains=wallet_search)
-            | Q(vehicle__assigned_driver__first_name__icontains=wallet_search)
-            | Q(vehicle__assigned_driver__last_name__icontains=wallet_search)
-            | Q(vehicle__assigned_driver__license_number__icontains=wallet_search)
-            | Q(vehicle__assigned_driver__driver_id__icontains=wallet_search)
-        )
 
-    if wallet_sort == "largest":
-        ordering = ["-last_deposit_amount", "-last_deposit_at"]
-    elif wallet_sort == "smallest":
-        ordering = ["last_deposit_amount", "-last_deposit_at"]
-    elif wallet_sort == "driver_asc":
-        ordering = [
-            "vehicle__assigned_driver__last_name",
-            "vehicle__assigned_driver__first_name",
-            "-last_deposit_at",
-        ]
-    elif wallet_sort == "driver_desc":
-        ordering = [
-            "-vehicle__assigned_driver__last_name",
-            "-vehicle__assigned_driver__first_name",
-            "-last_deposit_at",
-        ]
-    else:
-        ordering = ["-last_deposit_at", "-updated_at"]
-
-    wallets_count = wallets_qs.count()
-    wallets_sorted = wallets_qs.order_by(*ordering)
-    wallets = wallets_sorted[:80]
-    if request.method == "POST":
-        vehicle_id = request.POST.get("vehicle_id")
-        amount_str = request.POST.get("amount", "").strip()
-
-        if not vehicle_id or not amount_str:
-            messages.error(request, "⚠️ Please fill in all required fields.")
-            return redirect('terminal:deposit_menu')
-
-        try:
-            amount = Decimal(amount_str)
-        except:
-            messages.error(request, "❌ Invalid deposit amount.")
-            return redirect('terminal:deposit_menu')
-
-        if amount <= 0:
-            messages.error(request, "⚠️ Deposit amount must be greater than zero.")
-            return redirect('terminal:deposit_menu')
-
-        vehicle = Vehicle.objects.filter(id=vehicle_id).first()
-        if not vehicle:
-            messages.error(request, "❌ Vehicle not found.")
-            return redirect('terminal:deposit_menu')
-
-        wallet, _ = Wallet.objects.get_or_create(vehicle=vehicle)
-        Deposit.objects.create(wallet=wallet, amount=amount)
-
-        messages.success(request, f"✅ Successfully deposited ₱{amount} to {vehicle.license_plate}.")
-        return redirect('terminal:deposit_menu')
-
-    toast_messages = [msg.message for msg in messages.get_messages(request)]
-
-    context = {
-        "min_deposit": min_deposit,
-        "wallets": wallets,
-        "wallets_total": wallets_count,
-        "wallet_sort": wallet_sort,
-        "wallet_search": wallet_search,
-        "driver_options": driver_options,
-        "toast_messages": toast_messages,
-    }
-    return render(request, "terminal/deposit_menu.html", context)
-
-
-@login_required(login_url='accounts:login')
-@user_passes_test(is_staff_admin_or_admin)
-@never_cache
-def deposit_history(request):
-    history_sort = request.GET.get("history_sort", "newest").lower()
-    if history_sort not in ("newest", "largest", "smallest", "driver_asc", "driver_desc"):
-        history_sort = "newest"
-    history_query = request.GET.get("history_query", "").strip()
-
-    deposits = Deposit.objects.select_related("wallet__vehicle__assigned_driver")
-
-    if history_query:
-        deposits = deposits.filter(
-            Q(wallet__vehicle__license_plate__icontains=history_query)
-            | Q(wallet__vehicle__assigned_driver__first_name__icontains=history_query)
-            | Q(wallet__vehicle__assigned_driver__last_name__icontains=history_query)
-            | Q(wallet__vehicle__assigned_driver__license_number__icontains=history_query)
-            | Q(wallet__vehicle__assigned_driver__driver_id__icontains=history_query)
-        )
-
-    if history_sort == "largest":
-        ordering = ["-amount", "-created_at"]
-    elif history_sort == "smallest":
-        ordering = ["amount", "-created_at"]
-    elif history_sort == "driver_asc":
-        ordering = [
-            "wallet__vehicle__assigned_driver__last_name",
-            "wallet__vehicle__assigned_driver__first_name",
-            "-created_at",
-        ]
-    elif history_sort == "driver_desc":
-        ordering = [
-            "-wallet__vehicle__assigned_driver__last_name",
-            "-wallet__vehicle__assigned_driver__first_name",
-            "-created_at",
-        ]
-    else:
-        ordering = ["-created_at"]
-
-    deposits = deposits.order_by(*ordering)
-    total_amount = deposits.aggregate(Sum("amount"))["amount__sum"] or 0
-    total_count = deposits.count()
-
-    context = {
-        "history_deposits": deposits[:200],
-        "history_sort": history_sort,
-        "history_query": history_query,
-        "total_amount": total_amount,
-        "total_count": total_count,
-    }
-    return render(request, "terminal/deposit_history.html", context)
-
-
-@login_required(login_url='accounts:login')
-@user_passes_test(is_staff_admin_or_admin)
-@never_cache
-def transactions_view(request):
-    range_type = request.GET.get("range_type", "")
-    export_year = request.GET.get("export_year", "")
-    export_month = request.GET.get("export_month", "")
-    export_week = request.GET.get("export_week", "")
-    export_start = request.GET.get("export_start", "")
-    export_end = request.GET.get("export_end", "")
-    export_action = request.GET.get("export", "")
-
-    entry_logs = EntryLog.objects.select_related(
-        "vehicle__assigned_driver", "staff"
-    ).order_by("-created_at")[:500]
-    queue_logs = QueueHistory.objects.select_related("vehicle", "driver").order_by(
-        "-timestamp"
-    )[:500]
-
-    combined_activity = []
-
-    def _driver_name_from_vehicle(vehicle):
-        driver_obj = getattr(vehicle, "assigned_driver", None)
-        if driver_obj:
-            return f"{driver_obj.first_name} {driver_obj.last_name}"
-        return "N/A"
-
-    for log in entry_logs:
-        driver_name = (
-            _driver_name_from_vehicle(log.vehicle)
-            if log.vehicle
-            else "N/A"
-        )
-        plate = getattr(log.vehicle, "license_plate", "—") if log.vehicle else "—"
-        combined_activity.append({
-            "timestamp": log.created_at,
-            "plate": plate,
-            "driver": driver_name,
-            "action": "Entry",
-            "status": log.status.title(),
-            "fee": log.fee_charged,
-            "balance": log.wallet_balance_snapshot,
-            "staff": log.staff.username if log.staff else "N/A",
-            "source": "Entry Log",
-        })
-
-    for queue in queue_logs:
-        if not queue.vehicle:
-            continue
-        driver_obj = queue.driver or getattr(queue.vehicle, "assigned_driver", None)
-        driver_name = (
-            f"{driver_obj.first_name} {driver_obj.last_name}"
-            if driver_obj
-            else "N/A"
-        )
-        combined_activity.append({
-            "timestamp": queue.timestamp,
-            "plate": queue.vehicle.license_plate,
-            "driver": driver_name,
-            "action": queue.get_action_display(),
-            "status": queue.action.title(),
-            "fee": None,
-            "balance": queue.wallet_balance_snapshot,
-            "staff": "Queue System",
-            "source": "Queue History",
-        })
-
-    combined_activity.sort(key=lambda item: item["timestamp"], reverse=True)
-
-    tz = timezone.get_current_timezone()
+def build_export_filters(
+    range_type,
+    export_year,
+    export_month,
+    export_week,
+    export_start,
+    export_end,
+    list_range,
+    preferred_date_input,
+    tz,
+):
     start_filter = None
     end_filter = None
     try:
@@ -323,72 +92,194 @@ def transactions_view(request):
                 end_date = datetime.strptime(export_end, "%Y-%m-%d")
                 end_filter = timezone.make_aware(end_date + timedelta(days=1) - timedelta(seconds=1), tz)
     except (ValueError, TypeError):
-        start_filter = None
-        end_filter = None
+        return None, None
 
-    def _passes_time_filters(entry_ts):
-        if start_filter and entry_ts < start_filter:
-            return False
-        if end_filter and entry_ts > end_filter:
-            return False
-        return True
+    if not range_type and list_range:
+        span_days = {
+            "today": 1,
+            "3days": 3,
+            "7days": 7,
+            "month": 30,
+        }.get(list_range)
+        if span_days:
+            base_date = parse_preferred_date(preferred_date_input, tz)
+            day_start = make_datetime_from_date(base_date, tz)
+            day_end = day_start + timedelta(days=span_days) - timedelta(seconds=1)
+            start_filter = day_start
+            end_filter = day_end
 
-    filtered_activity = [
-        item for item in combined_activity
-        if _passes_time_filters(item["timestamp"])
+    return start_filter, end_filter
+
+
+@login_required(login_url="accounts:login")
+@user_passes_test(is_staff_admin_or_admin)
+@never_cache
+def transactions_view(request):
+    # --------------------------------------------------
+    # GET PARAMS
+    # --------------------------------------------------
+    range_type = request.GET.get("range_type", "")
+    export_year = request.GET.get("export_year", "")
+    export_month = request.GET.get("export_month", "")
+    export_week = request.GET.get("export_week", "")
+    export_start = request.GET.get("export_start", "")
+    export_end = request.GET.get("export_end", "")
+    export_action = request.GET.get("export", "")
+    list_range = request.GET.get("list_range", "")
+    preferred_date_input = request.GET.get("preferred_date", "")
+
+    tz = timezone.get_current_timezone()
+    preferred_date_value = parse_preferred_date(
+        preferred_date_input, tz
+    ).strftime("%Y-%m-%d")
+
+    # --------------------------------------------------
+    # CANONICAL DATA SOURCE
+    # --------------------------------------------------
+    activity_qs = (
+        TerminalActivity.objects
+        .select_related("vehicle__assigned_driver", "driver")
+        .order_by("-timestamp")
+    )
+
+    # --------------------------------------------------
+    # NORMALIZER (SINGLE SOURCE OF SHAPE)
+    # --------------------------------------------------
+    def normalize(record):
+        vehicle = record.vehicle
+        driver = record.driver or getattr(vehicle, "assigned_driver", None)
+
+        return {
+            "timestamp": record.timestamp,
+            "plate": getattr(vehicle, "license_plate", "—") if vehicle else "—",
+            "driver": (
+                f"{driver.first_name} {driver.last_name}"
+                if driver else "N/A"
+            ),
+            "route": record.route_name or format_route_display(
+                getattr(vehicle, "route", None)
+            ),
+            "event_label": record.get_event_type_display(),
+            "action": record.event_type,
+            "fee": record.fee_charged,
+            "balance": record.wallet_balance_snapshot,
+            "staff": "Terminal System",
+            "source": "Terminal Activity",
+        }
+
+    # --------------------------------------------------
+    # DISPLAY DATA (NO DATE FILTERING)
+    # --------------------------------------------------
+    activity = [
+        normalize(r)
+        for r in activity_qs[:200]
     ]
-    activity = filtered_activity[:200]
 
-    success_qs = EntryLog.objects.filter(status=EntryLog.STATUS_SUCCESS)
-    total_revenue = success_qs.aggregate(Sum("fee_charged"))["fee_charged__sum"] or 0
-    total_success = success_qs.count()
-    active_queue = success_qs.filter(is_active=True).count()
-    queue_event_count = QueueHistory.objects.count()
+    # --------------------------------------------------
+    # CSV DATE FILTERING (ONLY FOR EXPORT)
+    # --------------------------------------------------
+    export_items = activity
 
     if export_action == "csv":
-        export_items = filtered_activity if range_type or export_start or export_end else combined_activity
-        label = range_type or "all"
-        response = HttpResponse(content_type="text/csv")
-        response[
-            "Content-Disposition"
-        ] = f'attachment; filename="activity_history_{label}.csv"'
-        writer = csv.writer(response)
-        writer.writerow(
-            [
-                "Date",
-                "Plate",
-                "Driver",
-                "Wallet Deduction",
-                "System Revenue",
-                "Wallet Balance Snapshot",
-            ]
+        csv_start, csv_end = build_export_filters(
+            range_type,
+            export_year,
+            export_month,
+            export_week,
+            export_start,
+            export_end,
+            list_range,
+            preferred_date_input,
+            tz,
         )
+
+        def passes(ts):
+            if csv_start and ts < csv_start:
+                return False
+            if csv_end and ts > csv_end:
+                return False
+            return True
+
+        export_items = [
+            normalize(r)
+            for r in activity_qs
+            if passes(r.timestamp)
+        ]
+
+    # --------------------------------------------------
+    # METRICS (THIS IS WHERE YOUR BUG WAS)
+    # --------------------------------------------------
+
+    # ✅ CORRECT: queued vehicles come from Vehicle.status
+    active_queue = Vehicle.objects.filter(
+        status__in=["queued", "boarding"]
+    ).count()
+
+    # ✅ CORRECT: revenue from actual terminal charges
+    total_revenue = (
+        TerminalActivity.objects
+        .filter(event_type=TerminalActivity.EVENT_ENTRY)
+        .aggregate(total=Sum("fee_charged"))["total"]
+        or 0
+    )
+
+    total_success = EntryLog.objects.filter(
+        status=EntryLog.STATUS_SUCCESS
+    ).count()
+
+    queue_event_count = QueueHistory.objects.count()
+
+    # --------------------------------------------------
+    # CSV EXPORT
+    # --------------------------------------------------
+    if export_action == "csv":
+        label = range_type or (list_range or "all")
+
+        response = HttpResponse(
+            content_type="text/csv; charset=utf-8"
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="activity_history_{label}.csv"'
+        )
+        response.write("\ufeff")  # UTF-8 BOM
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Date",
+            "Plate",
+            "Driver",
+            "Route",
+            "Event",
+            "System Revenue",
+        ])
+
         for item in export_items:
-            local_timestamp = timezone.localtime(item["timestamp"])
-            fee_display = f"-₱{item['fee']:.2f}" if item["fee"] is not None else "—"
-            revenue_display = f"₱{item['fee']:.2f}" if item["fee"] is not None else "—"
-            balance_display = (
-                f"₱{item['balance']:.2f}"
-                if item["balance"] is not None
+            ts = timezone.localtime(item["timestamp"])
+            fee = (
+                f"₱{item['fee']:.2f}"
+                if item["fee"] is not None
                 else "—"
             )
-            writer.writerow(
-                [
-                    local_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                    item["plate"],
-                    item["driver"],
-                    fee_display,
-                    revenue_display,
-                    balance_display,
-                ]
-            )
+
+            writer.writerow([
+                ts.strftime("%Y-%m-%d %H:%M:%S"),
+                item["plate"],
+                item["driver"],
+                item["route"],
+                item["event_label"],
+                fee,
+            ])
+
         return response
 
+    # --------------------------------------------------
+    # RENDER
+    # --------------------------------------------------
     context = {
         "activity": activity,
         "total_revenue": total_revenue,
         "total_success": total_success,
-        "active_queue": active_queue,
+        "active_queue": active_queue,   # ← THIS WILL DISPLAY
         "queue_events": queue_event_count,
         "activity_count": len(activity),
         "range_type": range_type,
@@ -397,9 +288,12 @@ def transactions_view(request):
         "export_week": export_week,
         "export_start": export_start,
         "export_end": export_end,
+        "list_range": list_range,
+        "preferred_date": preferred_date_value,
+        "quick_ranges": QUICK_RANGE_LABELS,
     }
-    return render(request, "terminal/transactions.html", context)
 
+    return render(request, "terminal/transactions.html", context)
 
 # ===============================
 #   DEPOSIT ANALYTICS (Admin)
@@ -536,7 +430,7 @@ def deposit_vs_revenue(request):
 def terminal_queue(request):
     """Render the main terminal queue page (the page which will poll queue-data)."""
     # ensure auto-close/cleanup runs for admin pages too
-    _apply_auto_close_and_cleanup()
+    apply_entry_log_maintenance()
     return render(request, "terminal/terminal_queue.html")
 
 
@@ -551,12 +445,13 @@ def tv_display_view(request, route_slug=None):
     - Includes recent QueueHistory snippets to highlight activity per route
     """
 
-    _apply_auto_close_and_cleanup(delete_after_minutes=PASSENGER_DELETE_AFTER_MINUTES)
+    now = timezone.now()
+    now, duration, departed_cutoff = apply_entry_log_maintenance(
+        now=now,
+        delete_after_minutes=PASSENGER_DELETE_AFTER_MINUTES
+    )
 
     ph_tz = pytz_timezone("Asia/Manila")
-    settings = SystemSettings.get_solo()
-    duration = getattr(settings, "departure_duration_minutes", 30)
-
     all_routes = Route.objects.filter(active=True).order_by("origin", "destination")
     route_map = {slugify(r.name): r.name for r in all_routes}
     selected_route_name = None
@@ -564,8 +459,6 @@ def tv_display_view(request, route_slug=None):
         selected_route_name = route_map.get(route_slug.lower().strip("/"))
 
     now = timezone.now()
-    departed_cutoff = now - timedelta(minutes=DEPARTED_VISIBLE_MINUTES)
-
     queue_logs = (
         EntryLog.objects
         .filter(status=EntryLog.STATUS_SUCCESS)
@@ -576,7 +469,9 @@ def tv_display_view(request, route_slug=None):
     if selected_route_name:
         queue_logs = queue_logs.filter(vehicle__route__name=selected_route_name)
 
-    entries = _build_public_queue_entries(queue_logs, now, duration, departed_cutoff)
+    entries = build_public_queue_entries(queue_logs, now, duration, departed_cutoff)
+    allowed_statuses = {"Boarding", "Departed"}
+    entries = [entry for entry in entries if entry["status"] in allowed_statuses]
     entries_by_route = OrderedDict()
     for entry in entries:
         entries_by_route.setdefault(entry["route"], []).append(entry)
@@ -594,7 +489,7 @@ def tv_display_view(request, route_slug=None):
 
     history_map = OrderedDict()
     for event in history_queryset[:48]:
-        route_name = str(event.vehicle.route) if event.vehicle and event.vehicle.route else "Unassigned Route"
+        route_name = format_route_display(event.vehicle.route) if event.vehicle else "Unassigned Route"
         history_list = history_map.setdefault(route_name, [])
         if len(history_list) >= 3:
             continue
@@ -662,7 +557,7 @@ def tv_display_view(request, route_slug=None):
 def queue_data(request):
     """AJAX endpoint for live queue refresh."""
     # maintenance
-    _apply_auto_close_and_cleanup()
+    apply_entry_log_maintenance()
 
     logs = (
         EntryLog.objects.filter(status=EntryLog.STATUS_SUCCESS, is_active=True)
@@ -697,7 +592,7 @@ def queue_data(request):
 @never_cache
 def simple_queue_view(request):
     # maintenance
-    _apply_auto_close_and_cleanup()
+    apply_entry_log_maintenance()
 
     settings = SystemSettings.get_solo()
     duration = getattr(settings, "departure_duration_minutes", 30)
@@ -726,7 +621,7 @@ def simple_queue_view(request):
 @never_cache
 def manage_queue(request):
     # maintenance
-    _apply_auto_close_and_cleanup()
+    apply_entry_log_maintenance()
 
     settings = SystemSettings.get_solo()
     duration = getattr(settings, "departure_duration_minutes", 30)
@@ -756,7 +651,7 @@ def manage_queue(request):
 def qr_scan_entry(request):
     """Handles QR scan for both entry & departure validation with live balance feedback."""
     # Run maintenance on entry routes too so state is consistent when scanning
-    _apply_auto_close_and_cleanup()
+    apply_entry_log_maintenance()
 
     settings = SystemSettings.get_solo()
     entry_fee = settings.terminal_fee
@@ -855,6 +750,18 @@ def qr_scan_entry(request):
                     status=EntryLog.STATUS_SUCCESS,
                     message=f"Vehicle '{vehicle.license_plate}' entered terminal."
                 )
+                if vehicle:
+                    departure_snapshot = timezone.now() + timedelta(
+                        minutes=getattr(settings, "departure_duration_minutes", 30)
+                    )
+                    QueueHistory.objects.create(
+                        vehicle=vehicle,
+                        driver=getattr(vehicle, "assigned_driver", None),
+                        action="enter",
+                        departure_time_snapshot=departure_snapshot,
+                        wallet_balance_snapshot=wallet.balance,
+                        fee_charged=entry_fee,
+                    )
 
                 return JsonResponse({
                     "status": "success",
@@ -917,6 +824,16 @@ def qr_exit_validation(request):
         active_log.is_active = False
         active_log.departed_at = timezone.now()
         active_log.save(update_fields=["is_active", "departed_at"])
+        vehicle = active_log.vehicle
+        if vehicle:
+            QueueHistory.objects.create(
+                vehicle=vehicle,
+                driver=getattr(vehicle, "assigned_driver", None),
+                action="exit",
+                departure_time_snapshot=active_log.departed_at,
+                wallet_balance_snapshot=getattr(getattr(vehicle, "wallet", None), "balance", None),
+                fee_charged=None,
+            )
         return JsonResponse({"status": "success", "message": f"✅ {vehicle.license_plate} departed."})
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})
@@ -1030,7 +947,6 @@ def queue_history(request):
 def manage_routes(request):
     """Admin-only page for managing routes and viewing analytics."""
     from django.db.models import Count, Sum
-    from .models import EntryLog
 
     # --- ROUTE CRUD HANDLING ---
     if request.method == "POST":

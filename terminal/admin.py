@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TerminalFeeBalance, EntryLog, SystemSettings
+from .models import TerminalFeeBalance, EntryLog, SystemSettings, TerminalActivity
 
 admin.site.register(SystemSettings)
 
@@ -17,3 +17,17 @@ class EntryLogAdmin(admin.ModelAdmin):
     list_filter = ("status", "staff")
     search_fields = ("vehicle__plate_number", "staff__username")
     ordering = ("-created_at",)
+
+
+@admin.register(TerminalActivity)
+class TerminalActivityAdmin(admin.ModelAdmin):
+    list_display = (
+        "vehicle",
+        "driver",
+        "event_type",
+        "fee_charged",
+        "timestamp",
+    )
+    list_filter = ("event_type",)
+    search_fields = ("vehicle__license_plate", "driver__last_name")
+    ordering = ("-timestamp",)

@@ -58,37 +58,9 @@
             <p class="route-card__subtitle">
               {{ section.entries|length }} Vehicles
               <span class="route-card__subtitle-muted">
-                · Boarding {{ section.status_summary.Boarding|default:0 }}
                 · Queued {{ section.status_summary.Queued|default:0 }}
-                · Departed {{ section.status_summary.Departed|default:0 }}
-                {% if section.status_summary.Idle %}
-                  · Idle
-                {% endif %}
               </span>
             </p>
-          </div>
-          <div class="route-card__badges">
-            <span class="route-card__badge route-card__badge--boarding">
-              <i class="fa-solid fa-person-running"></i>
-              <strong>{{ section.status_summary.Boarding|default:0 }}</strong>
-              <span>boarding</span>
-            </span>
-            <span class="route-card__badge route-card__badge--queued">
-              <i class="fa-solid fa-hashtag"></i>
-              <strong>{{ section.status_summary.Queued|default:0 }}</strong>
-              <span>queued</span>
-            </span>
-            <span class="route-card__badge route-card__badge--departed">
-              <i class="fa-solid fa-check-circle"></i>
-              <strong>{{ section.status_summary.Departed|default:0 }}</strong>
-              <span>departed</span>
-            </span>
-            {% if section.status_summary.Idle %}
-            <span class="route-card__badge route-card__badge--idle">
-              <i class="fa-solid fa-signal"></i>
-              <strong>Idle</strong>
-            </span>
-            {% endif %}
           </div>
         </header>
         <div class="route-card__entries">
@@ -100,28 +72,26 @@
                 <span class="status-pill status-pill-{{ entry.status|lower }}">
                   {{ entry.status }}
                 </span>
-        </div>
+              </div>
               <div class="route-entry__info">
                 <span class="route-entry__driver">
                   <i class="fa-solid fa-user-tie"></i> {{ entry.driver_name }}
-                  </span>
+                </span>
                 <span class="route-entry__times">
                   <i class="fa-solid fa-calendar-days"></i>
                   {{ entry.entry_time_display }} → {{ entry.departure_time_display }}
-                  </span>
+                </span>
               </div>
               <div class="route-entry__countdown">
                 {% if entry.countdown_active %}
-                <span class="countdown-element" data-expiry="{{ entry.expiry_timestamp }}">
-                  <span class="countdown-text">--:--</span>
-                      </span>
-                {% elif entry.status == "Queued" %}
-                <span class="queued-pill">Queued</span>
-                    {% else %}
-                <span class="departed-pill">Departed</span>
-                        {% endif %}
-                      </div>
-                    </div>
+                  <span class="countdown-element" data-expiry="{{ entry.expiry_timestamp }}">
+                    <span class="countdown-text">--:--</span>
+                  </span>
+                {% else %}
+                  <span class="departed-pill">Departed</span>
+                {% endif %}
+              </div>
+            </div>
             {% endfor %}
           {% else %}
           <div class="route-card__empty">

@@ -14,7 +14,6 @@ from django.utils import timezone
 
 from django.core.files.base import ContentFile
 from cloudinary.models import CloudinaryField
-
 # ======================================================
 # ROUTE MODEL
 # ======================================================
@@ -74,7 +73,7 @@ class Driver(models.Model):
     # -----------------------------
     # LICENSE (LOCKED)
     # -----------------------------
-    license_number = models.CharField(max_length=50, blank=True, null=True)
+    license_number = models.CharField(max_length=50, blank=True, null=True, unique=True)
     license_expiry = models.DateField(blank=True, null=True)
 
     license_type = models.CharField(
@@ -87,7 +86,7 @@ class Driver(models.Model):
     # DRIVER PHOTO (REQUIRED)
     # -----------------------------
     driver_photo = CloudinaryField(
-        folder="drivers/photos",
+        "driver_photos",
         blank=False,
         null=False,
     )
@@ -181,7 +180,7 @@ class Vehicle(models.Model):
 
     # ✅ LOCAL QR IMAGE FIELD
     qr_code = CloudinaryField(
-        folder="vehicles/qrcodes",
+        "vehicle_qrcodes",
         blank=True,
         null=True,
     )
@@ -343,6 +342,7 @@ class QueueHistory(models.Model):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='queue_history')
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, blank=True)
     action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    fee_charged = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
     timestamp = models.DateTimeField(auto_now_add=True)
     departure_time_snapshot = models.DateTimeField(blank=True, null=True)

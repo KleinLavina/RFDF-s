@@ -489,6 +489,18 @@ class DriverRegistrationForm(forms.ModelForm):
             raise ValidationError("❌ Last name contains invalid characters.")
         return value
 
+    def clean_license_number(self):
+        value = self.cleaned_data.get('license_number')
+        if not value:
+            return value
+
+        normalized = str(value).strip().upper()
+        exists = Driver.objects.exclude(pk=self.instance.pk).filter(license_number=normalized).exists() if self.instance.pk else Driver.objects.filter(license_number=normalized).exists()
+        if exists:
+            raise ValidationError("❌ Driver license number is already registered.")
+
+        return normalized
+
     def clean(self):
         cleaned_data = super().clean()
         mobile = cleaned_data.get('mobile_number')
@@ -500,6 +512,19 @@ class DriverRegistrationForm(forms.ModelForm):
                     "⚠️ Emergency contact should be different from driver's number."
                 )
         return cleaned_data
+
+
+class DriverEditForm(DriverRegistrationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'driver_photo' in self.fields:
+            self.fields['driver_photo'].required = False
+
+    def clean_driver_photo(self):
+        photo = self.cleaned_data.get('driver_photo')
+        if photo:
+            return super().clean_driver_photo()
+        return getattr(self.instance, 'driver_photo', None)
 
 
 

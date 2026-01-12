@@ -58,15 +58,7 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="card border-0 rdfs-history-card">
-        <div class="card-body text-center">
-          <p class="text-muted small mb-1">Vehicles currently queued</p>
-          <h4 class="text-primary mb-0">{{ active_queue }}</h4>
-          <p class="small text-muted mb-0">Active entry logs</p>
-        </div>
-      </div>
-    </div>
+
     <div class="col-md-3">
       <div class="card border-0 rdfs-history-card">
         <div class="card-body text-center">
@@ -105,9 +97,9 @@
               <th>Date</th>
               <th>Driver</th>
               <th>Plate</th>
-              <th>Wallet deduction</th>
+              <th>Route</th>
+              <th>Event</th>
               <th>System revenue</th>
-              <th>Wallet balance</th>
             </tr>
           </thead>
           <tbody>
@@ -125,23 +117,19 @@
                   <td>
                     {{ entry.plate }}
                   </td>
-                  <td class="text-danger fw-semibold">
-                    {% if entry.fee is not None %}
-                      -₱{{ entry.fee|floatformat:2 }}
+                  <td>
+                    {{ entry.route }}
+                  </td>
+                  <td>
+                    {% if entry.event_label == "Entry" %}
+                      <span class="badge bg-success">Entry</span>
                     {% else %}
-                      —
+                      <span class="badge bg-secondary text-light">Exit</span>
                     {% endif %}
                   </td>
                   <td class="text-success fw-semibold">
                     {% if entry.fee is not None %}
                       ₱{{ entry.fee|floatformat:2 }}
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% if entry.balance is not None %}
-                      ₱{{ entry.balance|floatformat:2 }}
                     {% else %}
                       —
                     {% endif %}
@@ -173,6 +161,27 @@
         <p class="small text-muted">
           Choose the range you want to export. Select a year, month, week, or define a custom date window.
         </p>
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small mb-1">Preferred date</label>
+            <input
+              type="date"
+              name="preferred_date"
+              class="form-control form-control-sm"
+              value="{{ preferred_date }}"
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small mb-1">Quick range</label>
+            <select name="list_range" class="form-select form-select-sm">
+              {% for key, label in quick_ranges.items %}
+                <option value="{{ key }}" {% if list_range == key %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
         <div class="mb-3">
           <label class="form-label small mb-1">Range type</label>
           <select id="exportRangeType" name="range_type" class="form-select form-select-sm">
