@@ -6,32 +6,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vehicle Schedule | Maasin Integrated Terminal</title>
 
-  <!-- ===============================
-       FAVICON
-  ================================ -->
+  <!-- Favicon -->
   <link rel="icon" type="image/png" href="{% static 'img/RDFS-Logo.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/RDFS-Logo.png' %}">
 
-  <!-- ===============================
-       THIRD-PARTY CSS
-  ================================ -->
+  <!-- Third-Party CSS -->
   <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
-    rel="stylesheet"
-  >
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
-  <!-- ===============================
-       YOUR CSS
-  ================================ -->
+  <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'styles/passenger/03.css' %}">
   <link rel="stylesheet" href="{% static 'styles/passenger/04.css' %}">
   <link rel="stylesheet" href="{% static 'styles/passenger/05.css' %}">
-  <link
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-    rel="stylesheet"
-  >
-  
+
+  <style>
+    /* Countdown animations */
+    @keyframes pulse-warning {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .countdown-warning {
+      animation: pulse-warning 1s ease-in-out infinite;
+      color: #dc3545 !important;
+    }
+    .countdown-critical {
+      animation: pulse-warning 0.5s ease-in-out infinite;
+      color: #dc3545 !important;
+      font-weight: bold;
+    }
+    
+    /* Smooth transitions for partial updates */
+    .queue-row-enter {
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Status indicator for connection */
+    .connection-status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+    .connection-status.connected {
+      background: rgba(40, 167, 69, 0.9);
+      color: white;
+    }
+    .connection-status.disconnected {
+      background: rgba(220, 53, 69, 0.9);
+      color: white;
+    }
+    .connection-status.connecting {
+      background: rgba(255, 193, 7, 0.9);
+      color: black;
+    }
+  </style>
 </head>
 
 <body>
@@ -58,11 +95,12 @@
         <div class="table-toolbar__title">
           <i class="bi bi-list-ul"></i>
           <span>Vehicle Queue</span>
+          <span id="queueCounts" class="ms-2 small text-muted"></span>
         </div>
         <div class="table-toolbar__actions">
-          <form method="get" class="table-toolbar__filter">
+          <form method="get" class="table-toolbar__filter" id="routeFilterForm">
             <i class="bi bi-funnel"></i>
-            <select name="route" onchange="this.form.submit()">
+            <select name="route" id="routeFilter">
               <option value="all">All Routes</option>
               {% for route in routes %}
                 <option value="{{ route.id }}"
@@ -72,420 +110,496 @@
               {% endfor %}
             </select>
           </form>
-          <button type="button" class="table-toolbar__refresh" onclick="window.location.reload()">
+          <button type="button" class="table-toolbar__refresh" id="manualRefreshBtn">
             <i class="fa-solid fa-rotate-right"></i>
-            Refresh Page
+            Refresh
           </button>
         </div>
       </div>
 
-        <!-- DESKTOP TABLE (hidden on mobile) -->
-        <table>
-          <thead>
-        <tr>
-          <th>Entry Time</th>
-          <th>Vehicle</th>
-          <th>Route</th>
-          <th>Driver</th>
-          <th>Status</th>
-          <th>Departure</th>
-          <th>Countdown</th>
-        </tr>
-          </thead>
-
+      <!-- DESKTOP TABLE -->
+      <table id="queueTable">
+        <thead>
+          <tr>
+            <th>Entry Time</th>
+            <th>Vehicle</th>
+            <th>Route</th>
+            <th>Driver</th>
+            <th>Status</th>
+            <th>Departure</th>
+            <th>Countdown</th>
+          </tr>
+        </thead>
         <tbody id="queueTableBody">
-            {% for q in queue_entries %}
-            <tr class="{% if q.status == 'Departed' %}departed-row{% endif %}">
-            <td class="entry-time-cell">{{ q.entry_time_numeric }}</td>
-
-            <td>
-              {% if q.vehicle_plate != "—" %}
-                {{ q.vehicle_plate }}
-              {% else %}
-                —
-              {% endif %}
-            </td>
-
-              <td>
-                <span class="route-badge">{{ q.route }}</span>
-              </td>
-
-              <td>
-                {{ q.driver_name }}
-              </td>
-
-              <td>
-                <span class="status-pill status-pill-{{ q.status|lower }}">
-                  {{ q.status }}
-                </span>
-              </td>
-
-              <td>{{ q.departure_time_display }}</td>
-
-              <td>
-                {% if q.countdown_active %}
-                  <span class="countdown" data-expiry="{{ q.expiry_timestamp }}">
-                    --
-                  </span>
-                {% elif q.status == "Queued" %}
-                  <span class="badge bg-secondary">Queued</span>
-                {% else %}
-                  <span class="badge bg-danger">Departed</span>
-                {% endif %}
-              </td>
-
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+          <!-- Populated via JavaScript -->
+        </tbody>
+      </table>
         
-<!-- MOBILE CARDS (hidden on desktop) -->
-<div class="mobile-cards-container">
-  {% for q in queue_entries %}
-  <div class="vehicle-card vehicle-card--landscape"{% if q.countdown_active %} data-expiry="{{ q.expiry_timestamp }}"{% endif %}>
-    
-    <!-- CARD HEADER: Vehicle & Status -->
-    <div class="card-header">
-      <div class="vehicle-info">
-        <div class="vehicle-icon">
-          <i class="bi bi-truck"></i>
-        </div>
-        <div class="vehicle-details">
-          <div class="vehicle-plate">
-            {% if q.vehicle_plate != "—" %}
-              {{ q.vehicle_plate }}
-            {% else %}
-              Unassigned
-            {% endif %}
-          </div>
-          <div class="driver-name">{{ q.driver_name }}</div>
-        </div>
+      <!-- MOBILE CARDS -->
+      <div class="mobile-cards-container" id="mobileQueueCards">
+        <!-- Populated via JavaScript -->
       </div>
-      <span class="status-pill status-pill-{{ q.status|lower }}">
-        {{ q.status }}
-      </span>
-          <!-- COUNTDOWN STATUS -->
-    <div class="card-countdown">
-      <div class="countdown-section">
-        <div class="countdown-label">
-          <i class="bi bi-stopwatch"></i>
-          <span>Countdown</span>
-        </div>
-        <div class="countdown-timer">
-          {% if q.countdown_active %}
-            <span class="countdown-mobile countdown-mobile-element" 
-                  data-expiry="{{ q.expiry_timestamp }}">
-              --
-            </span>
-          {% elif q.status == "Queued" %}
-            <span class="queued-badge">Waiting in line</span>
-          {% else %}
-            <span class="departed-badge">
-              <i class="bi bi-check-circle"></i> Departed
-            </span>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    </div>
-    
 
-    
-    <!-- CARD BODY: Key Information -->
-    <div class="card-body">
-      
-      <!-- Route Information -->
-      <div class="info-section">
-        <div class="info-label">
-          <i class="bi bi-signpost"></i>
-          <span>Route</span>
-        </div>
-        <div class="route-tag">{{ q.route }}</div>
+      <div class="p-5 text-center text-muted d-none" id="queueEmptyState">
+        <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+        No vehicles currently scheduled.
       </div>
-      
-      <!-- Times Row -->
-      <div class="times-grid">
-        <div class="time-item">
-          <div class="time-label">
-            <i class="bi bi-clock"></i>
-            <span>Entry</span>
-          </div>
-          <div class="time-value">{{ q.entry_time_display }}</div>
-        </div>
-        <div class="time-item">
-          <div class="time-label">
-            <i class="bi bi-calendar2-check"></i>
-            <span>Departure</span>
-          </div>
-          <div class="time-value">{{ q.departure_time_display }}</div>
-        </div>
-      </div>
-      
-    </div>
-    
-  </div>
-  {% endfor %}
-</div>
-
-    <div class="p-5 text-center text-muted {% if queue_entries %}d-none{% endif %}" id="queueEmptyState">
-      <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-      No vehicles currently scheduled.
     </div>
   </div>
 </section>
 
+<!-- Connection Status Indicator -->
+<div class="connection-status connecting" id="connectionStatus">
+  <i class="bi bi-wifi"></i> <span>Connecting...</span>
+</div>
+
 <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
 
-<!-- ===============================
-     REAL-TIME COUNTDOWN SCRIPT
-================================ -->
-<script>
-let queueServerOffset = 0;
-(function () {
-  function formatTime(seconds) {
-    if (seconds <= 0) {
-      return '00:00';
-    }
-
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  function updateAllCountdowns() {
-    const now = Math.floor(Date.now() / 1000) - queueServerOffset;
-
-    document.querySelectorAll('.countdown').forEach(el => {
-      const expiryTimestamp = parseInt(el.dataset.expiry, 10);
-      if (isNaN(expiryTimestamp)) return;
-
-      const remaining = expiryTimestamp - now;
-
-      if (remaining <= 0) {
-        el.innerHTML = '<span class="badge bg-danger">Time Expired</span>';
-        const row = el.closest('tr');
-        if (row) {
-          row.classList.add('departed-row');
-          const label = row.querySelector('.status-pill');
-          if (label) {
-            label.textContent = 'Departed';
-            label.classList.remove('status-pill-boarding', 'status-pill-queued');
-            label.classList.add('status-pill-departed');
-          }
-        }
-        const card = el.closest('.vehicle-card');
-        if (card) {
-          card.classList.add('departed-row');
-          const label = card.querySelector('.status-pill');
-          if (label) {
-            label.textContent = 'Departed';
-            label.classList.remove('status-pill-boarding', 'status-pill-queued');
-            label.classList.add('status-pill-departed');
-          }
-        }
-        return;
-      }
-
-      el.textContent = formatTime(remaining);
-      el.classList.remove('text-danger');
-
-      if (remaining < 300) {
-        el.classList.add('text-danger');
-      }
-    });
-
-    document.querySelectorAll('.countdown-mobile-element').forEach(el => {
-      const expiryTimestamp = parseInt(el.dataset.expiry, 10);
-      if (isNaN(expiryTimestamp)) return;
-
-      const remaining = expiryTimestamp - now;
-
-      if (remaining <= 0) {
-        el.className = 'badge bg-danger';
-        el.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Expired';
-        return;
-      }
-
-      el.textContent = formatTime(remaining);
-      el.classList.remove('countdown-danger');
-
-      if (remaining < 300) {
-        el.classList.add('countdown-danger');
-      }
-    });
-
-    requestAnimationFrame(updateAllCountdowns);
-  }
-
-  function handleResponsiveSwitch() {
-    const isMobile = window.innerWidth <= 768;
-    const cardsContainer = document.querySelector('.mobile-cards-container');
-    const table = document.querySelector('table');
-
-    if (isMobile) {
-      if (table) table.style.display = 'none';
-      if (cardsContainer) cardsContainer.style.display = 'flex';
-    } else {
-      if (table) table.style.display = 'table';
-      if (cardsContainer) cardsContainer.style.display = 'none';
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    updateAllCountdowns();
-    handleResponsiveSwitch();
-    window.addEventListener('resize', handleResponsiveSwitch);
-  });
-
-})();
-</script>
 <script>
 (function() {
-  const queueApiUrl = "{% url 'passenger:public_queue_data' %}";
-  const routeFilter = "{{ selected_route|default:'all' }}";
-  const tableBody = document.getElementById("queueTableBody");
-  const mobileContainer = document.getElementById("mobileQueueCards");
-  const emptyState = document.getElementById("queueEmptyState");
+  'use strict';
 
-  function escapeHtml(value) {
-    const div = document.createElement("div");
-    div.textContent = value ?? "";
+  // ===========================================
+  // CONFIGURATION
+  // ===========================================
+  const CONFIG = {
+    wsUrl: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/queue/`,
+    apiUrl: "{% url 'terminal:public_queue_api' %}",
+    refreshInterval: {{ departure_duration_minutes|default:30 }} * 1000, // Fallback polling interval
+    reconnectDelay: 3000,
+    maxReconnectAttempts: 10,
+  };
+
+  // ===========================================
+  // STATE
+  // ===========================================
+  let state = {
+    entries: [],
+    serverTime: Math.floor(Date.now() / 1000),
+    serverOffset: 0,
+    countdownDuration: 30,
+    refreshInterval: 15,
+    socket: null,
+    reconnectAttempts: 0,
+    pollTimer: null,
+    countdownTimer: null,
+  };
+
+  // ===========================================
+  // DOM ELEMENTS
+  // ===========================================
+  const elements = {
+    tableBody: document.getElementById('queueTableBody'),
+    mobileCards: document.getElementById('mobileQueueCards'),
+    emptyState: document.getElementById('queueEmptyState'),
+    queueTable: document.getElementById('queueTable'),
+    routeFilter: document.getElementById('routeFilter'),
+    routeFilterForm: document.getElementById('routeFilterForm'),
+    manualRefreshBtn: document.getElementById('manualRefreshBtn'),
+    connectionStatus: document.getElementById('connectionStatus'),
+    queueCounts: document.getElementById('queueCounts'),
+  };
+
+  // ===========================================
+  // UTILITY FUNCTIONS
+  // ===========================================
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str ?? '';
     return div.innerHTML;
   }
 
-  function statusClass(status) {
-    return (status || "idle").toLowerCase();
+  function formatCountdown(seconds) {
+    if (seconds <= 0) return '00:00';
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  function buildRow(entry) {
-    const statusName = statusClass(entry.status);
-    const countdownHtml = entry.countdown_active
-      ? `<span class="countdown" data-expiry="${entry.expiry_timestamp}">--</span>`
-      : entry.status === "Queued"
-        ? '<span class="text-muted small">Waiting in line</span>'
-        : '<span class="badge bg-danger">Departed</span>';
+  function getNow() {
+    return Math.floor(Date.now() / 1000) - state.serverOffset;
+  }
+
+  function getCountdownClass(remaining) {
+    if (remaining <= 60) return 'countdown-critical';
+    if (remaining <= 300) return 'countdown-warning';
+    return '';
+  }
+
+  function updateConnectionStatus(status) {
+    const el = elements.connectionStatus;
+    el.className = `connection-status ${status}`;
+    const icons = { connected: 'bi-wifi', disconnected: 'bi-wifi-off', connecting: 'bi-arrow-repeat' };
+    const labels = { connected: 'Live', disconnected: 'Offline', connecting: 'Connecting...' };
+    el.innerHTML = `<i class="bi ${icons[status]}"></i> <span>${labels[status]}</span>`;
+  }
+
+  // ===========================================
+  // RENDER FUNCTIONS
+  // ===========================================
+  function renderTableRow(entry) {
+    const statusClass = (entry.status || 'idle').toLowerCase();
+    const isDeparted = entry.status === 'Departed';
+    
+    let countdownHtml = '';
+    if (entry.countdown_active && entry.expiry_timestamp) {
+      countdownHtml = `<span class="countdown" data-expiry="${entry.expiry_timestamp}">--:--</span>`;
+    } else if (entry.departed_countdown_active && entry.departed_countdown_expiry) {
+      countdownHtml = `<span class="countdown departed-countdown" data-expiry="${entry.departed_countdown_expiry}">--:--</span>`;
+    } else if (entry.status === 'Queued') {
+      countdownHtml = '<span class="badge bg-secondary">Queued</span>';
+    } else {
+      countdownHtml = '<span class="badge bg-danger">Departed</span>';
+    }
 
     return `
-      <tr class="${entry.status === "Departed" ? "departed-row" : ""}">
+      <tr class="${isDeparted ? 'departed-row' : ''}" data-entry-id="${entry.id}">
         <td class="entry-time-cell">${escapeHtml(entry.entry_time_numeric)}</td>
         <td>${escapeHtml(entry.vehicle_plate)}</td>
         <td><span class="route-badge">${escapeHtml(entry.route)}</span></td>
         <td>${escapeHtml(entry.driver_name)}</td>
         <td>
-          <span class="status-pill status-pill-${statusName}">
+          <span class="status-pill status-pill-${statusClass}">
             ${escapeHtml(entry.status)}
           </span>
         </td>
-        <td>${escapeHtml(entry.entry_time_display)}</td>
+        <td>${escapeHtml(entry.departure_time_display)}</td>
         <td>${countdownHtml}</td>
-      </tr>`;
+      </tr>
+    `;
   }
 
-  function buildCard(entry) {
-    const statusName = statusClass(entry.status);
-    const countdownHtml = entry.countdown_active
-      ? `<span class="countdown-mobile countdown-mobile-element" data-expiry="${entry.expiry_timestamp}">--</span>`
-      : entry.status === "Queued"
-        ? '<span class="text-muted small">Waiting in line</span>'
-        : '<span class="badge bg-danger">Departed</span>';
+  function renderMobileCard(entry) {
+    const statusClass = (entry.status || 'idle').toLowerCase();
+    
+    let countdownHtml = '';
+    if (entry.countdown_active && entry.expiry_timestamp) {
+      countdownHtml = `<span class="countdown-mobile countdown-mobile-element" data-expiry="${entry.expiry_timestamp}">--:--</span>`;
+    } else if (entry.departed_countdown_active && entry.departed_countdown_expiry) {
+      countdownHtml = `<span class="countdown-mobile countdown-mobile-element departed-countdown" data-expiry="${entry.departed_countdown_expiry}">--:--</span>`;
+    } else if (entry.status === 'Queued') {
+      countdownHtml = '<span class="queued-badge">Waiting in line</span>';
+    } else {
+      countdownHtml = '<span class="departed-badge"><i class="bi bi-check-circle"></i> Departed</span>';
+    }
 
     return `
-      <div class="vehicle-card"${entry.countdown_active ? ` data-expiry="${entry.expiry_timestamp}"` : ""}>
+      <div class="vehicle-card vehicle-card--landscape" data-entry-id="${entry.id}">
         <div class="card-header">
-          <div class="card-plate">
-            <i class="bi bi-truck"></i> ${escapeHtml(entry.vehicle_plate)}
+          <div class="vehicle-info">
+            <div class="vehicle-icon">
+              <i class="bi bi-truck"></i>
+            </div>
+            <div class="vehicle-details">
+              <div class="vehicle-plate">${escapeHtml(entry.vehicle_plate) || 'Unassigned'}</div>
+              <div class="driver-name">${escapeHtml(entry.driver_name)}</div>
+            </div>
           </div>
-          <span class="status-pill status-pill-${statusName}">
+          <span class="status-pill status-pill-${statusClass}">
             ${escapeHtml(entry.status)}
           </span>
+          <div class="card-countdown">
+            <div class="countdown-section">
+              <div class="countdown-label">
+                <i class="bi bi-stopwatch"></i>
+                <span>Countdown</span>
+              </div>
+              <div class="countdown-timer">${countdownHtml}</div>
+            </div>
+          </div>
         </div>
-        <div class="card-details">
-          <div class="detail-row">
-            <div class="detail-icon">
-              <i class="bi bi-calendar"></i>
-            </div>
-            <div class="detail-content">
-              <div class="detail-label">Entry Time</div>
-              <div class="detail-value">${escapeHtml(entry.entry_time_numeric)}</div>
-            </div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-icon">
-              <i class="bi bi-clock-history"></i>
-            </div>
-            <div class="detail-content">
-              <div class="detail-label">Departure Time</div>
-              <div class="detail-value">${escapeHtml(entry.departure_time_display)}</div>
-            </div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-icon">
+        <div class="card-body">
+          <div class="info-section">
+            <div class="info-label">
               <i class="bi bi-signpost"></i>
+              <span>Route</span>
             </div>
-            <div class="detail-content">
-              <div class="detail-label">Route</div>
-              <div class="route-tag">${escapeHtml(entry.route)}</div>
-            </div>
+            <div class="route-tag">${escapeHtml(entry.route)}</div>
           </div>
-          <div class="detail-row">
-            <div class="detail-icon">
-              <i class="bi bi-person-badge"></i>
+          <div class="times-grid">
+            <div class="time-item">
+              <div class="time-label">
+                <i class="bi bi-clock"></i>
+                <span>Entry</span>
+              </div>
+              <div class="time-value">${escapeHtml(entry.entry_time_display)}</div>
             </div>
-            <div class="detail-content">
-              <div class="detail-label">Driver</div>
-              <div class="detail-value">${escapeHtml(entry.driver_name)}</div>
-            </div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-icon">
-              <i class="bi bi-stopwatch"></i>
-            </div>
-            <div class="detail-content">
-              <div class="detail-label">Countdown</div>
-              <div class="detail-value">${countdownHtml}</div>
+            <div class="time-item">
+              <div class="time-label">
+                <i class="bi bi-calendar2-check"></i>
+                <span>Departure</span>
+              </div>
+              <div class="time-value">${escapeHtml(entry.departure_time_display)}</div>
             </div>
           </div>
         </div>
-      </div>`;
+      </div>
+    `;
   }
 
   function renderQueue(entries) {
-    if (!tableBody || !mobileContainer) return;
-
-    tableBody.innerHTML = entries.map(buildRow).join("");
-    mobileContainer.innerHTML = entries.map(buildCard).join("");
-    emptyState.classList.toggle("d-none", entries.length > 0);
-    const tableElement = tableBody.closest("table");
-    if (tableElement) {
-      tableElement.classList.toggle("d-none", entries.length === 0);
-    }
-    mobileContainer.classList.toggle("d-none", entries.length === 0);
+    // Update table
+    elements.tableBody.innerHTML = entries.map(renderTableRow).join('');
+    
+    // Update mobile cards
+    elements.mobileCards.innerHTML = entries.map(renderMobileCard).join('');
+    
+    // Toggle visibility
+    const hasEntries = entries.length > 0;
+    elements.emptyState.classList.toggle('d-none', hasEntries);
+    elements.queueTable.classList.toggle('d-none', !hasEntries);
+    elements.mobileCards.classList.toggle('d-none', !hasEntries);
+    
+    // Update countdown displays immediately
+    updateCountdowns();
   }
 
-  function fetchQueueData() {
-    const url = new URL(queueApiUrl, window.location.origin);
-    if (routeFilter) {
-      url.searchParams.set("route", routeFilter);
-    }
+  function updateQueueCounts(counts) {
+    if (!counts) return;
+    const parts = [];
+    if (counts.boarding) parts.push(`${counts.boarding} Boarding`);
+    if (counts.queued) parts.push(`${counts.queued} Queued`);
+    if (counts.departed) parts.push(`${counts.departed} Departed`);
+    elements.queueCounts.textContent = parts.length ? `(${parts.join(', ')})` : '';
+  }
 
+  // ===========================================
+  // COUNTDOWN TIMER
+  // ===========================================
+  function updateCountdowns() {
+    const now = getNow();
+    
+    document.querySelectorAll('.countdown, .countdown-mobile-element').forEach(el => {
+      const expiry = parseInt(el.dataset.expiry, 10);
+      if (isNaN(expiry)) return;
+      
+      const remaining = expiry - now;
+      
+      if (remaining <= 0) {
+        if (el.classList.contains('departed-countdown')) {
+          el.innerHTML = '<span class="badge bg-secondary">Gone</span>';
+        } else {
+          el.innerHTML = '<span class="badge bg-danger">Time Expired</span>';
+        }
+        
+        // Update status pill in the same row/card
+        const container = el.closest('tr, .vehicle-card');
+        if (container) {
+          const statusPill = container.querySelector('.status-pill');
+          if (statusPill && !el.classList.contains('departed-countdown')) {
+            statusPill.textContent = 'Departed';
+            statusPill.className = 'status-pill status-pill-departed';
+          }
+          container.classList.add('departed-row');
+        }
+        return;
+      }
+      
+      el.textContent = formatCountdown(remaining);
+      el.className = el.className.replace(/countdown-warning|countdown-critical/g, '').trim();
+      const extraClass = getCountdownClass(remaining);
+      if (extraClass) el.classList.add(extraClass);
+    });
+  }
+
+  function startCountdownTimer() {
+    if (state.countdownTimer) cancelAnimationFrame(state.countdownTimer);
+    
+    function tick() {
+      updateCountdowns();
+      state.countdownTimer = requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  // ===========================================
+  // DATA HANDLING
+  // ===========================================
+  function handleQueueData(data) {
+    if (!data) return;
+    
+    // Update server time offset
+    if (data.server_time) {
+      state.serverOffset = Math.floor(Date.now() / 1000) - data.server_time;
+    }
+    
+    // Update configuration
+    if (data.countdown_duration) state.countdownDuration = data.countdown_duration;
+    if (data.refresh_interval) state.refreshInterval = data.refresh_interval;
+    
+    // Store and render entries
+    state.entries = data.entries || [];
+    renderQueue(state.entries);
+    updateQueueCounts(data.counts);
+  }
+
+  // ===========================================
+  // WEBSOCKET CONNECTION
+  // ===========================================
+  function connectWebSocket() {
+    if (state.socket && state.socket.readyState === WebSocket.OPEN) return;
+    
+    updateConnectionStatus('connecting');
+    
+    try {
+      state.socket = new WebSocket(CONFIG.wsUrl);
+      
+      state.socket.onopen = function() {
+        console.log('[Queue] WebSocket connected');
+        updateConnectionStatus('connected');
+        state.reconnectAttempts = 0;
+        stopPolling(); // Stop polling when WebSocket is connected
+      };
+      
+      state.socket.onmessage = function(event) {
+        try {
+          const data = JSON.parse(event.data);
+          handleQueueData(data);
+        } catch (e) {
+          console.error('[Queue] Failed to parse message:', e);
+        }
+      };
+      
+      state.socket.onclose = function(event) {
+        console.log('[Queue] WebSocket closed:', event.code);
+        updateConnectionStatus('disconnected');
+        
+        // Attempt reconnection
+        if (state.reconnectAttempts < CONFIG.maxReconnectAttempts) {
+          state.reconnectAttempts++;
+          setTimeout(connectWebSocket, CONFIG.reconnectDelay);
+        } else {
+          // Fall back to polling
+          startPolling();
+        }
+      };
+      
+      state.socket.onerror = function(error) {
+        console.error('[Queue] WebSocket error:', error);
+        updateConnectionStatus('disconnected');
+      };
+    } catch (e) {
+      console.error('[Queue] WebSocket connection failed:', e);
+      startPolling();
+    }
+  }
+
+  // ===========================================
+  // FALLBACK POLLING
+  // ===========================================
+  function fetchQueueData() {
+    const routeFilter = elements.routeFilter.value;
+    const url = new URL(CONFIG.apiUrl, window.location.origin);
+    if (routeFilter && routeFilter !== 'all') {
+      url.searchParams.set('route', routeFilter);
+    }
+    
     fetch(url)
       .then(response => response.json())
       .then(data => {
-        queueServerOffset = Math.floor(Date.now() / 1000) - (data.server_time || 0);
-        renderQueue(data.entries || []);
+        handleQueueData(data);
+        updateConnectionStatus('connected');
       })
-      .catch(() => {});
+      .catch(error => {
+        console.error('[Queue] Fetch error:', error);
+        updateConnectionStatus('disconnected');
+      });
   }
 
-  document.addEventListener("DOMContentLoaded", function() {
-    fetchQueueData();
-    setInterval(fetchQueueData, 10000);
-  });
+  function startPolling() {
+    if (state.pollTimer) return;
+    console.log('[Queue] Starting fallback polling');
+    
+    fetchQueueData(); // Initial fetch
+    state.pollTimer = setInterval(fetchQueueData, state.refreshInterval * 1000);
+  }
+
+  function stopPolling() {
+    if (state.pollTimer) {
+      clearInterval(state.pollTimer);
+      state.pollTimer = null;
+    }
+  }
+
+  // ===========================================
+  // RESPONSIVE LAYOUT
+  // ===========================================
+  function handleResponsiveSwitch() {
+    const isMobile = window.innerWidth <= 768;
+    if (elements.queueTable) {
+      elements.queueTable.style.display = isMobile ? 'none' : 'table';
+    }
+    if (elements.mobileCards) {
+      elements.mobileCards.style.display = isMobile ? 'flex' : 'none';
+    }
+  }
+
+  // ===========================================
+  // EVENT HANDLERS
+  // ===========================================
+  function setupEventListeners() {
+    // Route filter change
+    elements.routeFilter.addEventListener('change', function() {
+      // Trigger data fetch for new route
+      if (state.socket && state.socket.readyState === WebSocket.OPEN) {
+        // WebSocket will handle it through regular updates
+        // But we can fetch immediately for faster response
+        fetchQueueData();
+      } else {
+        fetchQueueData();
+      }
+    });
+    
+    // Manual refresh button
+    elements.manualRefreshBtn.addEventListener('click', function() {
+      fetchQueueData();
+    });
+    
+    // Responsive layout
+    window.addEventListener('resize', handleResponsiveSwitch);
+  }
+
+  // ===========================================
+  // INITIALIZATION
+  // ===========================================
+  function init() {
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Handle responsive layout
+    handleResponsiveSwitch();
+    
+    // Start countdown timer
+    startCountdownTimer();
+    
+    // Initial data from server (if available)
+    {% if queue_entries %}
+    handleQueueData({
+      entries: {{ queue_entries|safe }},
+      server_time: {{ server_now.timestamp|floatformat:0 }},
+      countdown_duration: 30,
+      refresh_interval: 15,
+    });
+    {% endif %}
+    
+    // Connect WebSocket (with fallback to polling)
+    connectWebSocket();
+    
+    // Also start initial fetch in case WebSocket takes time
+    setTimeout(fetchQueueData, 1000);
+  }
+
+  // Start when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
 })();
 </script>
 

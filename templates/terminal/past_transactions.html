@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% load static tz %}
+
+{% block title %}Past Transactions | RDFS{% endblock %}
+
+{% block content %}
+
+<style>
+.rdfs-transactions-scope {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+}
+.rdfs-transactions-header h3 {
+  font-weight: 700;
+  color: #112666;
+}
+.rdfs-transactions-header p {
+  color: #64748b;
+}
+.rdfs-transactions-card {
+  border-radius: 16px;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+.rdfs-transactions-table thead th {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.rdfs-transactions-table tbody tr td {
+  padding: 0.85rem 0.75rem;
+  vertical-align: middle;
+}
+.rdfs-transactions-table tbody tr:hover {
+  background: rgba(17, 38, 102, 0.03);
+}
+.filter-form {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1rem;
+}
+.metric-card {
+  border-radius: 12px;
+  padding: 1.25rem;
+  color: white;
+}
+.metric-card.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.metric-card.secondary {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+.metric-card.tertiary {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+.nav-link-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #112666;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.nav-link-custom:hover {
+  background: rgba(17, 38, 102, 0.08);
+  color: #112666;
+}
+.archive-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(108, 117, 125, 0.1);
+  border: 1px solid rgba(108, 117, 125, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 500;
+  color: #6c757d;
+}
+</style>
+
+<div class="p-4 rdfs-transactions-scope">
+  <!-- Header -->
+  <div class="rdfs-transactions-header mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+      <div>
+        <h3 class="mb-1">
+          <i class="bi bi-archive me-2"></i>
+          Past Transactions
+        </h3>
+        <p class="mb-0 small">
+          Archived transaction records from previous days (before {{ today }}).
+        </p>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <div class="archive-badge">
+          <i class="bi bi-calendar-range"></i>
+          Historical Records
+        </div>
+        <a href="{% url 'terminal:transactions' %}" class="nav-link-custom">
+          <i class="bi bi-clock-history"></i>
+          Today's Activity
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metrics Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="metric-card primary">
+        <p class="small mb-1 opacity-75">Yesterday's Revenue ({{ yesterday_display }})</p>
+        <h3 class="mb-0">₱{{ yesterday_revenue|floatformat:2 }}</h3>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="metric-card secondary">
+        <p class="small mb-1 opacity-75">Total Revenue (Filtered)</p>
+        <h3 class="mb-0">₱{{ total_revenue|floatformat:2 }}</h3>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="metric-card tertiary">
+        <p class="small mb-1 opacity-75">Archived Records</p>
+        <h3 class="mb-0">{{ total_transactions }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Form -->
+  <div class="card border-0 rdfs-transactions-card mb-4">
+    <div class="card-body">
+      <form method="get" class="filter-form">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Start Date</label>
+            <input type="date" name="start_date" class="form-control" 
+                   value="{{ start_date }}" max="{{ yesterday }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">End Date</label>
+            <input type="date" name="end_date" class="form-control" 
+                   value="{{ end_date }}" max="{{ yesterday }}">
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary flex-grow-1">
+                <i class="bi bi-funnel me-1"></i>
+                Filter
+              </button>
+              <button type="submit" name="export" value="csv" class="btn btn-success">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                CSV
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Quick Date Filters -->
+        <div class="mt-3 pt-3 border-top">
+          <span class="small text-muted me-2">Quick filters:</span>
+          <a href="?start_date={{ yesterday }}&end_date={{ yesterday }}" 
+             class="btn btn-sm btn-outline-secondary me-1">Yesterday</a>
+          <a href="?" class="btn btn-sm btn-outline-secondary">All Past Records</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Transactions Table -->
+  <div class="card border-0 rdfs-transactions-card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-muted small">
+          Showing {{ transactions|length }} archived record{{ transactions|length|pluralize }}
+          {% if start_date or end_date %}
+            <span class="badge bg-info ms-1">Filtered</span>
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover table-borderless rdfs-transactions-table mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Vehicle</th>
+              <th>Driver</th>
+              <th>Route</th>
+              <th>Fee</th>
+              <th>Balance</th>
+              <th>Exit Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if transactions %}
+              {% for tx in transactions %}
+                <tr>
+                  <td class="text-muted">{{ forloop.counter }}</td>
+                  <td>
+                    <span class="fw-medium">{{ tx.entry_timestamp|localtime|date:"M d, Y" }}</span>
+                  </td>
+                  <td>{{ tx.entry_timestamp|localtime|time:"h:i A" }}</td>
+                  <td>
+                    <span class="badge bg-light text-dark border">{{ tx.vehicle_plate }}</span>
+                  </td>
+                  <td>{{ tx.driver_name }}</td>
+                  <td>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ tx.route_name }}</span>
+                  </td>
+                  <td class="text-success fw-semibold">₱{{ tx.fee_charged|floatformat:2 }}</td>
+                  <td>
+                    {% if tx.wallet_balance_snapshot is not None %}
+                      ₱{{ tx.wallet_balance_snapshot|floatformat:2 }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if tx.exit_timestamp %}
+                      {{ tx.exit_timestamp|localtime|time:"h:i A" }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="9" class="text-center text-muted py-5">
+                  <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                  No archived transactions found.
+                  {% if start_date or end_date %}
+                    <p class="small mt-2 mb-0">Try adjusting your date filters.</p>
+                  {% else %}
+                    <p class="small mt-2 mb-0">Past records will appear here after each day ends.</p>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Info -->
+  <div class="mt-4 p-3 bg-light rounded-3">
+    <h6 class="mb-2">
+      <i class="bi bi-info-circle me-1"></i>
+      About Past Transactions
+    </h6>
+    <p class="small text-muted mb-2">
+      This page shows archived transaction records from <strong>before today</strong>.
+      Today's live transactions are shown in 
+      <a href="{% url 'terminal:transactions' %}">Today's Transactions</a>.
+    </p>
+    <p class="small text-muted mb-0">
+      <strong>CSV Export:</strong> Includes full date breakdown (year, month, day), 
+      entry/exit timestamps, fee charged, and wallet balance snapshot. 
+      Files are Excel-compatible with UTF-8 encoding for analytics and data mining.
+    </p>
+  </div>
+</div>
+
+{% endblock %}

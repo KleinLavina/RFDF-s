@@ -1,58 +1,308 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Profit Trend | RDFS{% endblock %}
+{% block title %}Profit Report | RDFS{% endblock %}
 
 {% block content %}
+<style>
+  .profit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .profit-title {
+    font-weight: 800;
+    font-size: 1.75rem;
+    color: #0f172a;
+    margin-bottom: 0.25rem;
+  }
+
+  .profit-subtitle {
+    color: #64748b;
+    font-size: 0.95rem;
+  }
+
+  .filter-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    margin-bottom: 2rem;
+  }
+
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .highlight-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .highlight-card.total {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+  }
+
+  .highlight-card.today {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+  }
+
+  .highlight-card.best::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #f59e0b;
+  }
+
+  .highlight-card.avg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #8b5cf6;
+  }
+
+  .highlight-card.entries::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #06b6d4;
+  }
+
+  .highlight-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.25rem;
+  }
+
+  .highlight-card.total .highlight-card__icon,
+  .highlight-card.today .highlight-card__icon {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .highlight-card.best .highlight-card__icon { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+  .highlight-card.avg .highlight-card__icon { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+  .highlight-card.entries .highlight-card__icon { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+
+  .highlight-card__value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+  }
+
+  .highlight-card.total .highlight-card__value,
+  .highlight-card.today .highlight-card__value {
+    color: white;
+  }
+
+  .highlight-card__label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.9;
+  }
+
+  .highlight-card__sub {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-top: 0.5rem;
+  }
+
+  .chart-card {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+  }
+
+  .chart-card__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .chart-card__title i {
+    color: #10b981;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .back-link:hover {
+    background: #f1f5f9;
+    color: #3b82f6;
+  }
+
+  .performance-note {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #92400e;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+
+  .performance-note i {
+    font-size: 1.25rem;
+  }
+</style>
+
 <div class="container-fluid p-4">
-  <h3 class="fw-bold text-primary mb-1">
-    <i class="bi bi-graph-up-arrow me-2"></i> Profit Trend
-  </h3>
-  <p class="text-muted mb-4">
-    Analyze total profit earned across selected time periods.
-  </p>
-
-
-
-<div class="text-end mb-3">
-  <a href="{% url 'reports:reports_home' %}" 
-     class="btn btn-outline-secondary btn-sm rounded-pill">
-    <i class="bi bi-arrow-left-circle-fill me-1"></i> Back to Reports Home
-  </a>
-</div>
-
-
-
-  <!-- Filter -->
-  <form method="GET" class="row g-3 align-items-end mb-4">
-    <div class="col-md-3">
-      <label class="form-label fw-semibold">Start Date</label>
-      <input type="date" name="start_date" value="{{ start_date }}" class="form-control shadow-sm">
+  <!-- Header -->
+  <div class="profit-header">
+    <div>
+      <h2 class="profit-title">
+        <i class="bi bi-graph-up-arrow text-success me-2"></i>
+        Profit Report
+      </h2>
+      <p class="profit-subtitle">
+        Analyze revenue performance and daily profit trends.
+      </p>
     </div>
-    <div class="col-md-3">
-      <label class="form-label fw-semibold">End Date</label>
-      <input type="date" name="end_date" value="{{ end_date }}" class="form-control shadow-sm">
-    </div>
-    <div class="col-md-3 d-flex align-items-end">
-      <button type="submit" class="btn btn-primary px-4">
-        <i class="bi bi-funnel-fill me-1"></i> Apply Filter
-      </button>
-    </div>
-  </form>
+    <a href="{% url 'reports:reports_home' %}" class="back-link">
+      <i class="bi bi-arrow-left-circle"></i> Back to Reports
+    </a>
+  </div>
 
-  <!-- Chart -->
-  <div class="card shadow-sm border-0 mb-4">
-    <div class="card-body">
-      <h5 class="card-title mb-3"><i class="bi bi-bar-chart-fill text-primary me-2"></i> Profit Overview</h5>
-      <canvas id="profitChart" height="110"></canvas>
+  <!-- Date Filter -->
+  <div class="filter-card">
+    <form method="GET" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold small text-muted">
+          <i class="bi bi-calendar-event me-1"></i> START DATE
+        </label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold small text-muted">
+          <i class="bi bi-calendar-event me-1"></i> END DATE
+        </label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-grow-1">
+          <i class="bi bi-funnel-fill me-1"></i> Apply Filter
+        </button>
+        <a href="?start_date=&end_date=" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Performance Note -->
+  {% if best_day_amount > 0 %}
+  <div class="performance-note">
+    <i class="bi bi-trophy-fill"></i>
+    <span>Best performing day: <strong>{{ best_day }}</strong> with <strong>₱{{ best_day_amount|floatformat:2 }}</strong> in revenue!</span>
+  </div>
+  {% endif %}
+
+  <!-- Highlight Cards -->
+  <div class="highlight-grid">
+    <div class="highlight-card total">
+      <div class="highlight-card__icon">
+        <i class="bi bi-currency-exchange"></i>
+      </div>
+      <div class="highlight-card__value">₱{{ total|floatformat:2 }}</div>
+      <div class="highlight-card__label">Total Profit</div>
+      <div class="highlight-card__sub">For selected period</div>
+    </div>
+
+    <div class="highlight-card today">
+      <div class="highlight-card__icon">
+        <i class="bi bi-calendar-check"></i>
+      </div>
+      <div class="highlight-card__value">₱{{ today_profit|floatformat:2 }}</div>
+      <div class="highlight-card__label">Today's Profit</div>
+      <div class="highlight-card__sub">Real-time</div>
+    </div>
+
+    <div class="highlight-card avg">
+      <div class="highlight-card__icon">
+        <i class="bi bi-calculator"></i>
+      </div>
+      <div class="highlight-card__value">₱{{ avg_daily_profit|floatformat:2 }}</div>
+      <div class="highlight-card__label">Daily Average</div>
+      <div class="highlight-card__sub">Mean profit per day</div>
+    </div>
+
+    <div class="highlight-card entries">
+      <div class="highlight-card__icon">
+        <i class="bi bi-receipt"></i>
+      </div>
+      <div class="highlight-card__value">{{ total_entries }}</div>
+      <div class="highlight-card__label">Total Entries</div>
+      <div class="highlight-card__sub">Terminal transactions</div>
+    </div>
+
+    <div class="highlight-card best">
+      <div class="highlight-card__icon">
+        <i class="bi bi-star-fill"></i>
+      </div>
+      <div class="highlight-card__value">₱{{ best_day_amount|floatformat:2 }}</div>
+      <div class="highlight-card__label">Best Day</div>
+      <div class="highlight-card__sub">{{ best_day }}</div>
     </div>
   </div>
 
-  <!-- Total Summary -->
-  <div class="card shadow-sm border-0 mb-4">
-    <div class="card-body text-center">
-      <h5 class="text-muted mb-1">Total Profit</h5>
-      <h3 class="fw-bold text-success">₱{{ total|floatformat:2 }}</h3>
-    </div>
+  <!-- Chart -->
+  <div class="chart-card">
+    <h3 class="chart-card__title">
+      <i class="bi bi-graph-up"></i>
+      Daily Profit Trend
+    </h3>
+    <canvas id="profitChart" height="100"></canvas>
+  </div>
+
+  <!-- Info -->
+  <div class="alert alert-success border-0 shadow-sm">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <strong>Note:</strong> Profit is calculated from terminal fees (revenue) collected from each vehicle entry.
+    Higher traffic days directly correlate with higher profits.
   </div>
 </div>
 
@@ -62,31 +312,63 @@ document.addEventListener("DOMContentLoaded", () => {
   const ctx = document.getElementById('profitChart');
   if (!ctx) return;
 
+  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+  gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
   new Chart(ctx, {
     type: 'line',
     data: {
       labels: {{ profit_labels|safe }},
       datasets: [{
-        label: 'Profit (₱)',
+        label: 'Daily Profit (₱)',
         data: {{ profit_values|safe }},
-        borderColor: '#198754',
-        backgroundColor: 'rgba(25,135,84,0.15)',
+        borderColor: '#10b981',
+        backgroundColor: gradient,
         fill: true,
-        tension: 0.3
+        tension: 0.4,
+        borderWidth: 3,
+        pointRadius: 4,
+        pointBackgroundColor: '#10b981',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointHoverRadius: 6,
       }]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: true,
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#343a40',
+          backgroundColor: '#1e293b',
           titleColor: '#fff',
-          bodyColor: '#fff'
+          bodyColor: '#fff',
+          padding: 12,
+          cornerRadius: 8,
+          displayColors: false,
+          callbacks: {
+            label: ctx => '₱' + ctx.parsed.y.toLocaleString()
+          }
         }
       },
       scales: {
-        y: { beginAtZero: true }
+        x: {
+          grid: { display: false },
+          ticks: { 
+            font: { size: 12, weight: '500' },
+            color: '#64748b'
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: '#f1f5f9' },
+          ticks: {
+            callback: val => '₱' + val.toLocaleString(),
+            font: { size: 12 },
+            color: '#64748b'
+          }
+        }
       }
     }
   });

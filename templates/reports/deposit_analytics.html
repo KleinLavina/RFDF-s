@@ -3,137 +3,354 @@
 {% block title %}Deposit Analytics | RDFS{% endblock %}
 
 {% block content %}
-<div class="container-fluid p-4">
+<style>
+  .analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
 
-  <!-- 🧭 Header -->
-  <div class="d-flex justify-content-between align-items-center mb-3">
+  .analytics-title {
+    font-weight: 800;
+    font-size: 1.75rem;
+    color: #0f172a;
+    margin-bottom: 0.25rem;
+  }
+
+  .analytics-subtitle {
+    color: #64748b;
+    font-size: 0.95rem;
+  }
+
+  .period-selector {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .period-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .period-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+
+  .period-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-box {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    text-align: center;
+    border-top: 4px solid;
+  }
+
+  .stat-box.primary { border-top-color: #3b82f6; }
+  .stat-box.success { border-top-color: #10b981; }
+  .stat-box.warning { border-top-color: #f59e0b; }
+  .stat-box.info { border-top-color: #06b6d4; }
+
+  .stat-box__value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-box__label {
+    font-size: 0.8rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .chart-card {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+  }
+
+  .chart-card__title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .chart-card__title i {
+    color: #3b82f6;
+  }
+
+  .top-vehicles-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .top-vehicles-table thead th {
+    background: #f8fafc;
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .top-vehicles-table tbody td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+
+  .rank-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .rank-badge.gold { background: #fef3c7; color: #d97706; }
+  .rank-badge.silver { background: #f1f5f9; color: #64748b; }
+  .rank-badge.bronze { background: #ffedd5; color: #c2410c; }
+  .rank-badge.default { background: #f1f5f9; color: #94a3b8; }
+
+  .plate-badge {
+    background: #f1f5f9;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .amount-highlight {
+    color: #10b981;
+    font-weight: 700;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .back-link:hover {
+    background: #f1f5f9;
+    color: #3b82f6;
+  }
+</style>
+
+<div class="container-fluid p-4">
+  <!-- Header -->
+  <div class="analytics-header">
     <div>
-      <h3 class="fw-bold text-primary mb-1">
-        <i class="bi bi-graph-up-arrow me-2"></i> Deposit Analytics
-      </h3>
-      <p class="text-muted mb-0">
-        Visual overview of driver deposits — track daily trends and top contributors.
+      <h2 class="analytics-title">
+        <i class="bi bi-bar-chart-fill text-primary me-2"></i>
+        Deposit Analytics
+      </h2>
+      <p class="analytics-subtitle">
+        Visual overview of driver deposits from {{ start_date|date:"M d" }} to {{ end_date|date:"M d, Y" }}
       </p>
     </div>
-  </div>
-
-
-<div class="text-end mb-3">
-  <a href="{% url 'reports:reports_home' %}" 
-     class="btn btn-outline-secondary btn-sm rounded-pill">
-    <i class="bi bi-arrow-left-circle-fill me-1"></i> Back to Reports Home
-  </a>
-</div>
-
-
-
-
-  <!-- 💰 Summary Card -->
-  <div class="row text-center mb-4">
-    <div class="col-md-4 offset-md-4">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <h6 class="text-muted mb-1 text-uppercase">Total Deposits (Last 7 Days)</h6>
-          <h2 class="fw-bold text-primary mb-0">₱{{ total_deposits|floatformat:2 }}</h2>
-        </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="period-selector">
+        <a href="?days=7" class="period-btn {% if days == 7 %}active{% endif %}">7 Days</a>
+        <a href="?days=14" class="period-btn {% if days == 14 %}active{% endif %}">14 Days</a>
+        <a href="?days=30" class="period-btn {% if days == 30 %}active{% endif %}">30 Days</a>
       </div>
+      <a href="{% url 'reports:reports_home' %}" class="back-link">
+        <i class="bi bi-arrow-left-circle"></i> Back
+      </a>
     </div>
   </div>
 
-  <!-- 📈 Chart -->
-  <div class="card shadow-sm border-0 mb-4">
-    <div class="card-body">
-      <h5 class="card-title mb-3">
-        <i class="bi bi-bar-chart-fill text-primary me-2"></i> 7-Day Deposit Trend
-      </h5>
-      <canvas id="depositChart" height="110"></canvas>
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-box primary">
+      <div class="stat-box__value">₱{{ total_deposits|floatformat:2 }}</div>
+      <div class="stat-box__label">Total Deposits</div>
+    </div>
+    <div class="stat-box success">
+      <div class="stat-box__value">{{ total_count }}</div>
+      <div class="stat-box__label">Transactions</div>
+    </div>
+    <div class="stat-box warning">
+      <div class="stat-box__value">₱{{ avg_deposit|floatformat:2 }}</div>
+      <div class="stat-box__label">Average Deposit</div>
+    </div>
+    <div class="stat-box info">
+      <div class="stat-box__value">{{ days }}</div>
+      <div class="stat-box__label">Days Period</div>
     </div>
   </div>
 
-  <!-- 🚗 Top Vehicles -->
-  <div class="card shadow-sm border-0 mb-4">
-    <div class="card-body">
-      <h5 class="card-title mb-3">
-        <i class="bi bi-trophy-fill text-warning me-2"></i> Top 5 Vehicles by Total Deposit
-      </h5>
-
-      {% if top_vehicles %}
-      <div class="table-responsive">
-        <table class="table table-striped align-middle mb-0">
-          <thead class="table-primary">
-            <tr>
-              <th>#</th>
-              <th>Vehicle Plate</th>
-              <th>Total Deposited (₱)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for v in top_vehicles %}
-            <tr>
-              <td>{{ forloop.counter }}</td>
-              <td class="fw-semibold">{{ v.wallet__vehicle__license_plate }}</td>
-              <td class="fw-bold text-success">₱{{ v.total|floatformat:2 }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-        <p class="text-muted text-center my-3">
-          <i class="bi bi-info-circle-fill me-2"></i> No deposit data found in the past 7 days.
-        </p>
-      {% endif %}
-    </div>
+  <!-- Chart -->
+  <div class="chart-card">
+    <h3 class="chart-card__title">
+      <i class="bi bi-graph-up-arrow"></i>
+      Daily Deposit Trend
+    </h3>
+    <canvas id="depositChart" height="100"></canvas>
   </div>
 
-  <!-- ℹ️ Info Note -->
-  <div class="alert alert-info shadow-sm">
+  <!-- Top Vehicles -->
+  <div class="chart-card">
+    <h3 class="chart-card__title">
+      <i class="bi bi-trophy-fill" style="color:#f59e0b;"></i>
+      Top 5 Vehicles by Total Deposit
+    </h3>
+
+    {% if top_vehicles %}
+    <div class="table-responsive">
+      <table class="top-vehicles-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Vehicle</th>
+            <th>Driver</th>
+            <th>Total Deposited</th>
+            <th>Deposits</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in top_vehicles %}
+          <tr>
+            <td>
+              {% if forloop.counter == 1 %}
+                <span class="rank-badge gold">1</span>
+              {% elif forloop.counter == 2 %}
+                <span class="rank-badge silver">2</span>
+              {% elif forloop.counter == 3 %}
+                <span class="rank-badge bronze">3</span>
+              {% else %}
+                <span class="rank-badge default">{{ forloop.counter }}</span>
+              {% endif %}
+            </td>
+            <td><span class="plate-badge">{{ v.wallet__vehicle__license_plate }}</span></td>
+            <td>{{ v.wallet__vehicle__assigned_driver__first_name }} {{ v.wallet__vehicle__assigned_driver__last_name }}</td>
+            <td class="amount-highlight">₱{{ v.total|floatformat:2 }}</td>
+            <td><span class="badge bg-secondary">{{ v.count }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-4">
+      <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+      No deposit data found for this period.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Info Note -->
+  <div class="alert alert-info border-0 shadow-sm">
     <i class="bi bi-info-circle-fill me-2"></i>
-    This report helps track daily deposit activity and identify the most active drivers.
+    This report tracks all deposits made to driver wallets and identifies top contributors.
   </div>
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const ctx = document.getElementById('depositChart');
   if (!ctx) return;
 
+  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+  gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
   new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: {{ labels|safe }},
       datasets: [{
-        label: 'Daily Total (₱)',
+        label: 'Daily Deposits (₱)',
         data: {{ daily_totals|safe }},
-        backgroundColor: 'rgba(13,110,253,0.6)',
-        borderColor: '#0d6efd',
-        borderWidth: 2,
-        borderRadius: 6,
-        hoverBackgroundColor: 'rgba(13,110,253,0.8)',
+        borderColor: '#3b82f6',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        borderWidth: 3,
+        pointRadius: 4,
+        pointBackgroundColor: '#3b82f6',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointHoverRadius: 6,
       }]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: true,
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#000',
+          backgroundColor: '#1e293b',
           titleColor: '#fff',
-          bodyColor: '#fff'
+          bodyColor: '#fff',
+          padding: 12,
+          cornerRadius: 8,
+          displayColors: false,
+          callbacks: {
+            label: ctx => '₱' + ctx.parsed.y.toLocaleString()
+          }
         }
       },
       scales: {
         x: {
           grid: { display: false },
-          ticks: { font: { size: 14 } }
+          ticks: { 
+            font: { size: 12, weight: '500' },
+            color: '#64748b'
+          }
         },
         y: {
           beginAtZero: true,
+          grid: { color: '#f1f5f9' },
           ticks: {
             callback: val => '₱' + val.toLocaleString(),
-            font: { size: 14 }
+            font: { size: 12 },
+            color: '#64748b'
           }
         }
       }

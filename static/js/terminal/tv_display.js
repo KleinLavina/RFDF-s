@@ -1,7 +1,17 @@
+/**
+ * TV Display JavaScript (Legacy fallback)
+ * 
+ * NOTE: This file is kept for backwards compatibility.
+ * The main logic is now inline in tv_display.html using WebSocket/Fetch
+ * for partial updates without full page reloads.
+ * 
+ * Full page reloads are DISABLED to preserve fullscreen mode.
+ */
+
 function updateDateTime() {
   const now = new Date();
   const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  const timeOptions = { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short' };
+  const timeOptions = { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' };
 
   const dateEl = document.getElementById('current-date');
   const timeEl = document.getElementById('current-time');
@@ -29,18 +39,17 @@ function updateCountdowns() {
   });
 }
 
-function scheduleAutoRefresh() {
-  setInterval(() => {
-    window.location.reload();
-  }, 30000);
-}
+// NOTE: Auto-refresh is DISABLED to preserve fullscreen mode
+// Data updates are now handled via WebSocket/Fetch in the template
+// function scheduleAutoRefresh() { ... } - REMOVED
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Clock and countdown timers only - no page reloads
   updateDateTime();
   setInterval(updateDateTime, 1000);
   updateCountdowns();
   setInterval(updateCountdowns, 1000);
-  scheduleAutoRefresh();
+  // NO auto-refresh - handled by WebSocket/Fetch in template
 });
 
 document.getElementById('fullscreenBtn')?.addEventListener('click', () => {

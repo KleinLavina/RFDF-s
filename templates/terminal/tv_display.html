@@ -7,24 +7,24 @@
   <title>Terminal TV Display | RDFS</title>
 
   <link rel="icon" type="image/png" href="{% static 'img/RDFS-Logo.png' %}">
-  <link rel="stylesheet" href="{% static 'styles/terminal/01.css' %}">
   <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="{% static 'css/tv_display_light.css' %}" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'styles/terminal/tv_display.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
 </head>
 
 <body>
 
-<header class="tv-mini-header">
-  <div class="tv-mini-header__left">
-    <a href="{% url 'accounts:staff_dashboard' %}" class="tv-mini-btn tv-mini-btn--dashboard">
+<header class="tv-header">
+  <div class="tv-header__left">
+    <a href="{% url 'accounts:staff_dashboard' %}" class="tv-btn tv-btn--back">
       <i class="fa-solid fa-circle-arrow-left"></i>
       <span>Back to dashboard</span>
     </a>
-    <div class="tv-mini-route-chip">
+    <div class="tv-route-chip">
       <i class="fa-solid fa-location-dot"></i>
-      <span>
+      <span id="selectedRouteLabel">
         {% if selected_route %}
           {{ selected_route }}
         {% else %}
@@ -33,99 +33,413 @@
       </span>
     </div>
   </div>
-  <div class="tv-mini-header__right">
-    <div id="live-clock" class="tv-mini-clock">
-      <i class="fa-solid fa-clock-rotate-left"></i>
+  <div class="tv-header__right">
+    <div class="tv-clock">
+      <i class="fa-solid fa-clock"></i>
       <span id="current-date"></span>
-      <span class="tv-mini-clock__divider">·</span>
+      <span class="tv-clock__divider">·</span>
       <span id="current-time"></span>
     </div>
-    <button id="fullscreenBtn" class="tv-mini-btn tv-mini-btn--fullscreen">
+    <button id="fullscreenBtn" class="tv-btn tv-btn--fullscreen">
       <i class="fa-solid fa-expand"></i>
       <span>Fullscreen</span>
     </button>
   </div>
 </header>
 
-<main class="tv-grid-wrapper">
-  <section class="route-grid">
-    {% if route_sections %}
-      {% for section in route_sections %}
-      <article class="route-card" data-route="{{ section.slug }}">
+<main class="tv-main">
+  <section class="tv-grid" id="routeGrid">
+    <!-- Route sections rendered dynamically -->
+  </section>
+</main>
+
+<!-- Connection indicator -->
+<div class="connection-indicator connecting" id="connectionIndicator"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  const CONFIG = {
+    wsUrl: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/tv-display/`,
+    apiUrl: "{% url 'terminal:tv_display_api' %}",
+    reconnectDelay: 3000,
+    maxReconnectAttempts: 15,
+  };
+
+  let state = {
+    routeSections: [],
+    history: {},
+    serverTime: Math.floor(Date.now() / 1000),
+    serverOffset: 0,
+    countdownDuration: 30,
+    refreshInterval: 15,
+    socket: null,
+    reconnectAttempts: 0,
+    pollTimer: null,
+    countdownTimer: null,
+    isFullscreen: false,
+  };
+
+  const elements = {
+    routeGrid: document.getElementById('routeGrid'),
+    fullscreenBtn: document.getElementById('fullscreenBtn'),
+    connectionIndicator: document.getElementById('connectionIndicator'),
+    currentDate: document.getElementById('current-date'),
+    currentTime: document.getElementById('current-time'),
+  };
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str ?? '';
+    return div.innerHTML;
+  }
+
+  function formatCountdown(seconds) {
+    if (seconds <= 0) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  function getNow() {
+    return Math.floor(Date.now() / 1000) - state.serverOffset;
+  }
+
+  function getCountdownClass(remaining) {
+    if (remaining <= 60) return 'countdown-critical';
+    if (remaining <= 300) return 'countdown-warning';
+    return '';
+  }
+
+  function updateConnectionIndicator(status) {
+    elements.connectionIndicator.className = `connection-indicator ${status}`;
+  }
+
+  function updateClock() {
+    const now = new Date();
+    const dateOptions = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+    const timeOptions = { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' };
+    
+    if (elements.currentDate) {
+      elements.currentDate.textContent = now.toLocaleDateString('en-US', dateOptions);
+    }
+    if (elements.currentTime) {
+      elements.currentTime.textContent = now.toLocaleTimeString('en-US', timeOptions);
+    }
+  }
+
+  function renderRouteEntry(entry) {
+    const statusClass = (entry.status || 'idle').toLowerCase();
+    
+    let countdownHtml = '';
+    if (entry.countdown_active && entry.expiry_timestamp) {
+      countdownHtml = `
+        <span class="countdown-element" data-expiry="${entry.expiry_timestamp}">
+          <i class="fa-solid fa-stopwatch"></i>
+          <span class="countdown-text">--:--</span>
+        </span>
+      `;
+    } else if (entry.departed_countdown_active && entry.departed_countdown_expiry) {
+      countdownHtml = `
+        <span class="countdown-element departed-countdown" data-expiry="${entry.departed_countdown_expiry}">
+          <i class="fa-solid fa-clock"></i>
+          <span class="countdown-text">--:--</span>
+        </span>
+      `;
+    } else {
+      countdownHtml = '<span class="departed-pill"><i class="fa-solid fa-check-circle"></i> Departed</span>';
+    }
+
+    return `
+      <div class="route-entry" data-entry-id="${entry.id}">
+        <div class="route-entry__top">
+          <span class="route-entry__plate">${escapeHtml(entry.vehicle_plate) || '—'}</span>
+          <span class="status-pill status-pill-${statusClass}">
+            <i class="fa-solid fa-circle" style="font-size:0.5rem;"></i>
+            ${escapeHtml(entry.status)}
+          </span>
+        </div>
+        <div class="route-entry__info">
+          <span class="route-entry__driver">
+            <i class="fa-solid fa-user-tie"></i> ${escapeHtml(entry.driver_name)}
+          </span>
+          <span class="route-entry__times">
+            <i class="fa-solid fa-calendar-days"></i>
+            ${escapeHtml(entry.entry_time_display)} → ${escapeHtml(entry.departure_time_display)}
+          </span>
+        </div>
+        <div class="route-entry__countdown">
+          ${countdownHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderHistoryEvents(events) {
+    if (!events || events.length === 0) return '';
+    
+    const eventsList = events.map(event => `
+      <li>
+        <span class="history-plate">${escapeHtml(event.vehicle_plate)}</span>
+        <span class="history-action">${escapeHtml(event.action)}</span>
+        <span class="history-time">${escapeHtml(event.timestamp)}</span>
+      </li>
+    `).join('');
+
+    return `
+      <div class="route-card__history">
+        <div class="history-title"><i class="fa-solid fa-clock-rotate-left"></i> Recent activity</div>
+        <ul>${eventsList}</ul>
+      </div>
+    `;
+  }
+
+  function renderRouteSection(section, historyEvents) {
+    const visibleEntries = section.visible_entries || section.entries.filter(
+      e => e.status === 'Boarding' || e.status === 'Departed'
+    );
+    const queuedCount = section.queued_count || section.status_summary?.Queued || 0;
+
+    let entriesHtml = '';
+    if (visibleEntries.length > 0) {
+      entriesHtml = visibleEntries.map(renderRouteEntry).join('');
+    } else {
+      entriesHtml = `
+        <div class="route-card__empty">
+          <i class="fa-solid fa-hourglass-half"></i>
+          <span>Awaiting vehicles</span>
+        </div>
+      `;
+    }
+
+    const totalVehicles = visibleEntries.length;
+    const queuedBadge = queuedCount > 0 
+      ? `<span class="queued-badge"><i class="fa-solid fa-users"></i> Queued: <span class="count">${queuedCount}</span></span>` 
+      : '';
+
+    return `
+      <article class="route-card" data-route="${escapeHtml(section.name)}">
         <header class="route-card__header">
           <div>
-            <h3 class="route-card__title">{{ section.name }}</h3>
+            <h3 class="route-card__title">${escapeHtml(section.name)}</h3>
             <p class="route-card__subtitle">
-              {{ section.entries|length }} Vehicles
-              <span class="route-card__subtitle-muted">
-                · Queued {{ section.status_summary.Queued|default:0 }}
-              </span>
+              <span>${totalVehicles} Active</span>
+              ${queuedBadge}
             </p>
           </div>
         </header>
         <div class="route-card__entries">
-          {% if section.entries %}
-            {% for entry in section.entries %}
-            <div class="route-entry">
-              <div class="route-entry__top">
-                <span class="route-entry__plate">{{ entry.vehicle_plate|default:"—" }}</span>
-                <span class="status-pill status-pill-{{ entry.status|lower }}">
-                  {{ entry.status }}
-                </span>
-              </div>
-              <div class="route-entry__info">
-                <span class="route-entry__driver">
-                  <i class="fa-solid fa-user-tie"></i> {{ entry.driver_name }}
-                </span>
-                <span class="route-entry__times">
-                  <i class="fa-solid fa-calendar-days"></i>
-                  {{ entry.entry_time_display }} → {{ entry.departure_time_display }}
-                </span>
-              </div>
-              <div class="route-entry__countdown">
-                {% if entry.countdown_active %}
-                  <span class="countdown-element" data-expiry="{{ entry.expiry_timestamp }}">
-                    <span class="countdown-text">--:--</span>
-                  </span>
-                {% else %}
-                  <span class="departed-pill">Departed</span>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          {% else %}
-          <div class="route-card__empty">
-            <i class="fa-solid fa-circle-dot"></i>
-            <span>Awaiting vehicles</span>
-                  </div>
-                  {% endif %}
+          ${entriesHtml}
         </div>
-        {% if section.history_events %}
-        <div class="route-card__history">
-          <div class="history-title">Recent activity</div>
-          <ul>
-            {% for event in section.history_events %}
-            <li>
-              <span class="history-plate">{{ event.vehicle_plate }}</span>
-              <span class="history-action">{{ event.action }}</span>
-              <span class="history-time">{{ event.timestamp }}</span>
-            </li>
-              {% endfor %}
-          </ul>
-        </div>
-        {% endif %}
+        ${renderHistoryEvents(historyEvents)}
       </article>
-      {% endfor %}
-    {% else %}
-    <div class="route-empty-state">
-      <i class="fa-solid fa-circle-exclamation"></i>
-      <p>No routes active right now.</p>
-      </div>
-    {% endif %}
-  </section>
-</main>
+    `;
+  }
 
-<script src="{% static 'js/terminal/tv_display.js' %}" defer></script>
+  function renderAllSections() {
+    if (!state.routeSections || state.routeSections.length === 0) {
+      elements.routeGrid.innerHTML = `
+        <div class="tv-empty-state">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <p>No routes active right now.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const sectionsHtml = state.routeSections.map(section => {
+      const historyEvents = state.history[section.name] || [];
+      return renderRouteSection(section, historyEvents);
+    }).join('');
+
+    elements.routeGrid.innerHTML = sectionsHtml;
+    updateCountdowns();
+  }
+
+  function updateCountdowns() {
+    const now = getNow();
+    
+    document.querySelectorAll('.countdown-element').forEach(el => {
+      const expiry = parseInt(el.dataset.expiry, 10);
+      if (isNaN(expiry)) return;
+      
+      const remaining = expiry - now;
+      const textEl = el.querySelector('.countdown-text');
+      
+      if (remaining <= 0) {
+        if (el.classList.contains('departed-countdown')) {
+          el.outerHTML = '<span class="departed-pill" style="opacity:0.6"><i class="fa-solid fa-check"></i> Gone</span>';
+        } else {
+          el.outerHTML = '<span class="departed-pill"><i class="fa-solid fa-flag-checkered"></i> Time Up</span>';
+        }
+        return;
+      }
+      
+      if (textEl) {
+        textEl.textContent = formatCountdown(remaining);
+      }
+      
+      el.classList.remove('countdown-warning', 'countdown-critical');
+      const extraClass = getCountdownClass(remaining);
+      if (extraClass) el.classList.add(extraClass);
+    });
+  }
+
+  function startCountdownTimer() {
+    if (state.countdownTimer) cancelAnimationFrame(state.countdownTimer);
+    
+    function tick() {
+      updateCountdowns();
+      state.countdownTimer = requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  function handleTVData(data) {
+    if (!data) return;
+    
+    if (data.server_time) {
+      state.serverOffset = Math.floor(Date.now() / 1000) - data.server_time;
+    }
+    
+    if (data.countdown_duration) state.countdownDuration = data.countdown_duration;
+    if (data.refresh_interval) state.refreshInterval = data.refresh_interval;
+    
+    state.routeSections = data.route_sections || [];
+    state.history = data.history || {};
+    
+    renderAllSections();
+  }
+
+  function connectWebSocket() {
+    if (state.socket && state.socket.readyState === WebSocket.OPEN) return;
+    
+    updateConnectionIndicator('connecting');
+    
+    try {
+      state.socket = new WebSocket(CONFIG.wsUrl);
+      
+      state.socket.onopen = function() {
+        updateConnectionIndicator('connected');
+        state.reconnectAttempts = 0;
+        stopPolling();
+      };
+      
+      state.socket.onmessage = function(event) {
+        try {
+          const data = JSON.parse(event.data);
+          handleTVData(data);
+        } catch (e) {
+          console.error('[TV] Parse error:', e);
+        }
+      };
+      
+      state.socket.onclose = function() {
+        updateConnectionIndicator('disconnected');
+        if (state.reconnectAttempts < CONFIG.maxReconnectAttempts) {
+          state.reconnectAttempts++;
+          setTimeout(connectWebSocket, CONFIG.reconnectDelay);
+        } else {
+          startPolling();
+        }
+      };
+      
+      state.socket.onerror = function() {
+        updateConnectionIndicator('disconnected');
+      };
+    } catch (e) {
+      startPolling();
+    }
+  }
+
+  function fetchTVData() {
+    fetch(CONFIG.apiUrl)
+      .then(response => response.json())
+      .then(data => {
+        handleTVData(data);
+        updateConnectionIndicator('connected');
+      })
+      .catch(() => {
+        updateConnectionIndicator('disconnected');
+      });
+  }
+
+  function startPolling() {
+    if (state.pollTimer) return;
+    fetchTVData();
+    state.pollTimer = setInterval(fetchTVData, state.refreshInterval * 1000);
+  }
+
+  function stopPolling() {
+    if (state.pollTimer) {
+      clearInterval(state.pollTimer);
+      state.pollTimer = null;
+    }
+  }
+
+  function setupFullscreenHandler() {
+    elements.fullscreenBtn?.addEventListener('click', function() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          document.body.classList.add('fullscreen-mode');
+          state.isFullscreen = true;
+          elements.fullscreenBtn.innerHTML = '<i class="fa-solid fa-compress"></i><span>Exit</span>';
+        }).catch(() => {});
+      } else {
+        document.exitFullscreen().then(() => {
+          document.body.classList.remove('fullscreen-mode');
+          state.isFullscreen = false;
+          elements.fullscreenBtn.innerHTML = '<i class="fa-solid fa-expand"></i><span>Fullscreen</span>';
+        });
+      }
+    });
+
+    document.addEventListener('fullscreenchange', function() {
+      if (!document.fullscreenElement) {
+        document.body.classList.remove('fullscreen-mode');
+        state.isFullscreen = false;
+        if (elements.fullscreenBtn) {
+          elements.fullscreenBtn.innerHTML = '<i class="fa-solid fa-expand"></i><span>Fullscreen</span>';
+        }
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        elements.fullscreenBtn?.click();
+      }
+    });
+  }
+
+  function init() {
+    setupFullscreenHandler();
+    updateClock();
+    setInterval(updateClock, 1000);
+    startCountdownTimer();
+    
+    {% if route_sections %}
+    handleTVData({
+      route_sections: {{ route_sections|safe }},
+      history: {},
+      server_time: Math.floor(Date.now() / 1000),
+    });
+    {% else %}
+    renderAllSections();
+    {% endif %}
+    
+    connectWebSocket();
+    setTimeout(fetchTVData, 1500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
 
 </body>
 </html>

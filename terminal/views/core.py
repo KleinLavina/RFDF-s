@@ -26,7 +26,6 @@ from terminal.shared_queue import (
 from vehicles.models import Vehicle, Wallet, Deposit, Route, QueueHistory
 from terminal.models import EntryLog, SystemSettings, TerminalActivity
 from terminal.utils import format_route_display
-from terminal.utils import format_route_display
 
 
 QUICK_RANGE_LABELS = OrderedDict(
@@ -115,35 +114,35 @@ def build_export_filters(
 @user_passes_test(is_staff_admin_or_admin)
 @never_cache
 def transactions_view(request):
-    # --------------------------------------------------
-    # GET PARAMS
-    # --------------------------------------------------
-    range_type = request.GET.get("range_type", "")
-    export_year = request.GET.get("export_year", "")
-    export_month = request.GET.get("export_month", "")
-    export_week = request.GET.get("export_week", "")
-    export_start = request.GET.get("export_start", "")
-    export_end = request.GET.get("export_end", "")
-    export_action = request.GET.get("export", "")
-    list_range = request.GET.get("list_range", "")
-    preferred_date_input = request.GET.get("preferred_date", "")
-
+    """
+    Present Day Transactions View
+    -----------------------------
+    Shows ONLY transactions from TODAY (current date).
+    Past transactions are archived and shown in past_transactions_view.
+    """
     tz = timezone.get_current_timezone()
-    preferred_date_value = parse_preferred_date(
-        preferred_date_input, tz
-    ).strftime("%Y-%m-%d")
+    today = timezone.localtime(timezone.now(), tz).date()
+    
+    # Get today's date boundaries
+    today_start = timezone.make_aware(
+        datetime(today.year, today.month, today.day, 0, 0, 0), tz
+    )
+    today_end = timezone.make_aware(
+        datetime(today.year, today.month, today.day, 23, 59, 59), tz
+    )
 
     # --------------------------------------------------
-    # CANONICAL DATA SOURCE
+    # TODAY'S ACTIVITY ONLY
     # --------------------------------------------------
     activity_qs = (
         TerminalActivity.objects
         .select_related("vehicle__assigned_driver", "driver")
+        .filter(timestamp__gte=today_start, timestamp__lte=today_end)
         .order_by("-timestamp")
     )
 
     # --------------------------------------------------
-    # NORMALIZER (SINGLE SOURCE OF SHAPE)
+    # NORMALIZER
     # --------------------------------------------------
     def normalize(record):
         vehicle = record.vehicle
@@ -163,134 +162,62 @@ def transactions_view(request):
             "action": record.event_type,
             "fee": record.fee_charged,
             "balance": record.wallet_balance_snapshot,
-            "staff": "Terminal System",
-            "source": "Terminal Activity",
         }
 
     # --------------------------------------------------
-    # DISPLAY DATA (NO DATE FILTERING)
+    # TODAY'S RECORDS ONLY
     # --------------------------------------------------
-    activity = [
-        normalize(r)
-        for r in activity_qs[:200]
-    ]
+    activity = [normalize(r) for r in activity_qs]
 
     # --------------------------------------------------
-    # CSV DATE FILTERING (ONLY FOR EXPORT)
+    # TODAY'S METRICS
     # --------------------------------------------------
-    export_items = activity
-
-    if export_action == "csv":
-        csv_start, csv_end = build_export_filters(
-            range_type,
-            export_year,
-            export_month,
-            export_week,
-            export_start,
-            export_end,
-            list_range,
-            preferred_date_input,
-            tz,
-        )
-
-        def passes(ts):
-            if csv_start and ts < csv_start:
-                return False
-            if csv_end and ts > csv_end:
-                return False
-            return True
-
-        export_items = [
-            normalize(r)
-            for r in activity_qs
-            if passes(r.timestamp)
-        ]
-
-    # --------------------------------------------------
-    # METRICS (THIS IS WHERE YOUR BUG WAS)
-    # --------------------------------------------------
-
-    # ✅ CORRECT: queued vehicles come from Vehicle.status
     active_queue = Vehicle.objects.filter(
         status__in=["queued", "boarding"]
     ).count()
 
-    # ✅ CORRECT: revenue from actual terminal charges
-    total_revenue = (
+    # Today's entry logs count
+    today_entry_logs = EntryLog.objects.filter(created_at__date=today).count()
+
+    # Today's revenue only
+    today_revenue = (
         TerminalActivity.objects
-        .filter(event_type=TerminalActivity.EVENT_ENTRY)
+        .filter(
+            event_type=TerminalActivity.EVENT_ENTRY,
+            timestamp__gte=today_start,
+            timestamp__lte=today_end
+        )
         .aggregate(total=Sum("fee_charged"))["total"]
         or 0
     )
 
-    total_success = EntryLog.objects.filter(
-        status=EntryLog.STATUS_SUCCESS
-    ).count()
+    # Today's entry count
+    today_entries = (
+        EntryLog.objects
+        .filter(status=EntryLog.STATUS_SUCCESS, created_at__date=today)
+        .count()
+    )
 
-    queue_event_count = QueueHistory.objects.count()
-
-    # --------------------------------------------------
-    # CSV EXPORT
-    # --------------------------------------------------
-    if export_action == "csv":
-        label = range_type or (list_range or "all")
-
-        response = HttpResponse(
-            content_type="text/csv; charset=utf-8"
-        )
-        response["Content-Disposition"] = (
-            f'attachment; filename="activity_history_{label}.csv"'
-        )
-        response.write("\ufeff")  # UTF-8 BOM
-
-        writer = csv.writer(response)
-        writer.writerow([
-            "Date",
-            "Plate",
-            "Driver",
-            "Route",
-            "Event",
-            "System Revenue",
-        ])
-
-        for item in export_items:
-            ts = timezone.localtime(item["timestamp"])
-            fee = (
-                f"₱{item['fee']:.2f}"
-                if item["fee"] is not None
-                else "—"
-            )
-
-            writer.writerow([
-                ts.strftime("%Y-%m-%d %H:%M:%S"),
-                item["plate"],
-                item["driver"],
-                item["route"],
-                item["event_label"],
-                fee,
-            ])
-
-        return response
+    # Today's queue events
+    today_queue_events = (
+        QueueHistory.objects
+        .filter(timestamp__gte=today_start, timestamp__lte=today_end)
+        .count()
+    )
 
     # --------------------------------------------------
     # RENDER
     # --------------------------------------------------
     context = {
         "activity": activity,
-        "total_revenue": total_revenue,
-        "total_success": total_success,
-        "active_queue": active_queue,   # ← THIS WILL DISPLAY
-        "queue_events": queue_event_count,
+        "today_revenue": today_revenue,
+        "today_entries": today_entries,
+        "active_queue": active_queue,
+        "today_entry_logs": today_entry_logs,
+        "today_queue_events": today_queue_events,
         "activity_count": len(activity),
-        "range_type": range_type,
-        "export_year": export_year,
-        "export_month": export_month,
-        "export_week": export_week,
-        "export_start": export_start,
-        "export_end": export_end,
-        "list_range": list_range,
-        "preferred_date": preferred_date_value,
-        "quick_ranges": QUICK_RANGE_LABELS,
+        "today_date": today.strftime("%B %d, %Y"),
+        "today_date_short": today.strftime("%Y-%m-%d"),
     }
 
     return render(request, "terminal/transactions.html", context)
@@ -439,111 +366,50 @@ def terminal_queue(request):
 @never_cache
 def tv_display_view(request, route_slug=None):
     """
-    Terminal TV Display
-    - Shares the same queue sourcing logic as the passenger view
-    - Groups vehicles by route, showing boarding, queued, and departed states
-    - Includes recent QueueHistory snippets to highlight activity per route
+    Terminal TV Display with partial page updates.
+    - Shows boarding and departed vehicles only in main list
+    - Queued vehicles shown as count badge
+    - Uses WebSocket/Fetch for real-time updates without page reload
+    - Preserves fullscreen state at all times
     """
-
-    now = timezone.now()
-    now, duration, departed_cutoff = apply_entry_log_maintenance(
-        now=now,
-        delete_after_minutes=PASSENGER_DELETE_AFTER_MINUTES
-    )
+    from terminal.services import QueueService
 
     ph_tz = pytz_timezone("Asia/Manila")
     all_routes = Route.objects.filter(active=True).order_by("origin", "destination")
     route_map = {slugify(r.name): r.name for r in all_routes}
+    
     selected_route_name = None
+    route_filter = None
     if route_slug:
         selected_route_name = route_map.get(route_slug.lower().strip("/"))
-
-    now = timezone.now()
-    queue_logs = (
-        EntryLog.objects
-        .filter(status=EntryLog.STATUS_SUCCESS)
-        .filter(Q(is_active=True) | Q(departed_at__gte=departed_cutoff))
-        .select_related("vehicle__assigned_driver", "vehicle__route")
-        .order_by("vehicle__route__origin", "vehicle__route__destination", "created_at")
-    )
-    if selected_route_name:
-        queue_logs = queue_logs.filter(vehicle__route__name=selected_route_name)
-
-    entries = build_public_queue_entries(queue_logs, now, duration, departed_cutoff)
-    allowed_statuses = {"Boarding", "Departed"}
-    entries = [entry for entry in entries if entry["status"] in allowed_statuses]
-    entries_by_route = OrderedDict()
-    for entry in entries:
-        entries_by_route.setdefault(entry["route"], []).append(entry)
-
-    status_summary_by_route = {}
-    for route_name, route_entries in entries_by_route.items():
-        summary = {"Boarding": 0, "Queued": 0, "Departed": 0}
-        for entry in route_entries:
-            summary[entry["status"]] = summary.get(entry["status"], 0) + 1
-        status_summary_by_route[route_name] = summary
-
-    history_queryset = QueueHistory.objects.select_related("vehicle__route").order_by("-timestamp")
-    if selected_route_name:
-        history_queryset = history_queryset.filter(vehicle__route__name=selected_route_name)
-
-    history_map = OrderedDict()
-    for event in history_queryset[:48]:
-        route_name = format_route_display(event.vehicle.route) if event.vehicle else "Unassigned Route"
-        history_list = history_map.setdefault(route_name, [])
-        if len(history_list) >= 3:
-            continue
-        history_list.append({
-            "vehicle_plate": getattr(event.vehicle, "license_plate", "—") if event.vehicle else "—",
-            "action": event.get_action_display(),
-            "timestamp": timezone.localtime(event.timestamp, ph_tz).strftime("%I:%M %p"),
-        })
-
-    route_order = []
-    seen_routes = set()
-    if selected_route_name:
-        route_order.append(selected_route_name)
-        seen_routes.add(selected_route_name)
-    for name in entries_by_route:
-        if name in seen_routes:
-            continue
-        route_order.append(name)
-        seen_routes.add(name)
-    if not selected_route_name:
+        # Get route ID for filtering
         for route in all_routes:
-            name = str(route)
-            if name in seen_routes:
-                continue
-            route_order.append(name)
-            seen_routes.add(name)
-            if len(route_order) >= 16:
+            if str(route) == selected_route_name:
+                route_filter = route.id
                 break
-    if not route_order:
-        for route in all_routes[:16]:
-            route_order.append(str(route))
-    route_order = route_order[:16]
 
-    route_sections = []
-    for route_name in route_order:
-        route_entries = entries_by_route.get(route_name, [])
-        summary = status_summary_by_route.get(route_name, {"Boarding": 0, "Queued": 0, "Departed": 0}).copy()
-        summary.setdefault("Idle", 0)
-        if not route_entries:
-            summary["Idle"] = 1
-        route_sections.append({
-            "name": route_name,
-            "slug": slugify(route_name),
-            "entries": route_entries,
-            "history_events": history_map.get(route_name, []),
-            "status_summary": summary,
-        })
+    # Get TV display state from service layer
+    tv_state = QueueService.get_tv_display_state(route_filter=route_filter)
+
+    # Ensure route_sections have visible_entries for template
+    route_sections = tv_state.get("route_sections", [])
+    for section in route_sections:
+        if "visible_entries" not in section:
+            section["visible_entries"] = [
+                e for e in section.get("entries", [])
+                if e.get("status") in ("Boarding", "Departed")
+            ]
+        section["slug"] = slugify(section.get("name", ""))
+        section["history_events"] = tv_state.get("history", {}).get(section.get("name"), [])
 
     context = {
-        "route_sections": route_sections,
+        "route_sections": json.dumps(route_sections),
         "all_routes": all_routes,
         "selected_route": selected_route_name,
         "selected_route_slug": slugify(selected_route_name) if selected_route_name else "",
-        "current_time": timezone.localtime(now, ph_tz).isoformat(),
+        "current_time": timezone.localtime(timezone.now(), ph_tz).isoformat(),
+        "countdown_duration": tv_state.get("countdown_duration", 30),
+        "refresh_interval": tv_state.get("refresh_interval", 15),
     }
 
     return render(request, "terminal/tv_display.html", context)
@@ -853,7 +719,7 @@ def qr_exit_page(request):
 @user_passes_test(is_admin)
 @never_cache
 def system_settings(request):
-    """Admin-only configuration page with seat capacity limits."""
+    """Admin-only configuration page with seat capacity limits and queue display settings."""
     settings = SystemSettings.get_solo()
 
     class SettingsForm(forms.ModelForm):
@@ -864,7 +730,8 @@ def system_settings(request):
                 'min_deposit_amount',
                 'entry_cooldown_minutes',
                 'departure_duration_minutes',
-                # 🟢 Added new fields
+                'countdown_duration_seconds',
+                'queue_refresh_interval_seconds',
                 'jeepney_max_seats',
                 'van_max_seats',
                 'bus_max_seats',
@@ -875,6 +742,8 @@ def system_settings(request):
                 'min_deposit_amount': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
                 'entry_cooldown_minutes': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
                 'departure_duration_minutes': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+                'countdown_duration_seconds': forms.NumberInput(attrs={'class': 'form-control', 'min': '5', 'max': '300'}),
+                'queue_refresh_interval_seconds': forms.NumberInput(attrs={'class': 'form-control', 'min': '5', 'max': '120'}),
                 'jeepney_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
                 'van_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
                 'bus_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
@@ -892,6 +761,210 @@ def system_settings(request):
             messages.error(request, "❌ Please correct the errors below.")
 
     return render(request, "terminal/system_settings.html", {"form": form})
+
+
+# ===============================
+#   ARCHIVE HELPER FOR PAST TRANSACTIONS
+# ===============================
+def _archive_past_activities(archive_date, tz):
+    """
+    Archive TerminalActivity records from a specific date into Transaction model.
+    This is called when viewing past transactions to ensure records are archived.
+    
+    Args:
+        archive_date: The date to archive (typically yesterday)
+        tz: Timezone to use for date boundaries
+    """
+    from terminal.models import Transaction
+    
+    # Get date boundaries
+    date_start = timezone.make_aware(
+        datetime(archive_date.year, archive_date.month, archive_date.day, 0, 0, 0), tz
+    )
+    date_end = timezone.make_aware(
+        datetime(archive_date.year, archive_date.month, archive_date.day, 23, 59, 59), tz
+    )
+    
+    # Get entry activities from that date that haven't been archived yet
+    entry_activities = (
+        TerminalActivity.objects
+        .filter(
+            event_type=TerminalActivity.EVENT_ENTRY,
+            timestamp__gte=date_start,
+            timestamp__lte=date_end,
+        )
+        .select_related("vehicle", "driver", "vehicle__route", "entry_log")
+    )
+    
+    # Create Transaction records for each activity if not already exists
+    for activity in entry_activities:
+        # Check if already archived
+        if activity.entry_log_id:
+            exists = Transaction.objects.filter(entry_log_id=activity.entry_log_id).exists()
+            if exists:
+                continue
+        
+        # Also check by timestamp and vehicle to avoid duplicates
+        vehicle = activity.vehicle
+        exists_by_match = Transaction.objects.filter(
+            vehicle=vehicle,
+            entry_timestamp__gte=date_start,
+            entry_timestamp__lte=date_end,
+            fee_charged=activity.fee_charged or 0,
+        ).exists()
+        
+        if exists_by_match:
+            continue
+        
+        # Find corresponding exit activity
+        exit_activity = (
+            TerminalActivity.objects
+            .filter(
+                vehicle=vehicle,
+                event_type=TerminalActivity.EVENT_EXIT,
+                timestamp__gt=activity.timestamp,
+            )
+            .order_by("timestamp")
+            .first()
+        )
+        
+        exit_timestamp = exit_activity.timestamp if exit_activity else None
+        
+        driver = activity.driver or (vehicle.assigned_driver if vehicle else None)
+        route = vehicle.route if vehicle else None
+        
+        Transaction.objects.create(
+            vehicle=vehicle,
+            driver=driver,
+            entry_log=activity.entry_log,
+            vehicle_plate=getattr(vehicle, "license_plate", "—") if vehicle else "—",
+            driver_name=f"{driver.first_name} {driver.last_name}" if driver else "N/A",
+            route_name=activity.route_name or (f"{route.origin} → {route.destination}" if route else "Unassigned"),
+            entry_timestamp=activity.timestamp,
+            exit_timestamp=exit_timestamp,
+            fee_charged=activity.fee_charged or 0,
+            wallet_balance_snapshot=activity.wallet_balance_snapshot,
+            transaction_date=archive_date,
+            transaction_year=archive_date.year,
+            transaction_month=archive_date.month,
+            transaction_day=archive_date.day,
+            is_revenue_counted=True,
+        )
+
+
+# ===============================
+#   PAST TRANSACTIONS (with date filtering & CSV export)
+# ===============================
+@login_required(login_url='accounts:login')
+@user_passes_test(is_staff_admin_or_admin)
+@never_cache
+def past_transactions_view(request):
+    """
+    Past Transactions View (Archived Records)
+    -----------------------------------------
+    Shows ONLY transactions from BEFORE today (yesterday and earlier).
+    Today's transactions are shown in transactions_view.
+    
+    Also archives yesterday's TerminalActivity records into Transaction model.
+    """
+    from terminal.models import Transaction
+    from terminal.services import TransactionService
+
+    tz = timezone.get_current_timezone()
+    today = timezone.localtime(timezone.now(), tz).date()
+    yesterday = today - timedelta(days=1)
+
+    # --------------------------------------------------
+    # ARCHIVE YESTERDAY'S RECORDS (bulk archive)
+    # --------------------------------------------------
+    _archive_past_activities(yesterday, tz)
+
+    # Get filter parameters
+    start_date_str = request.GET.get("start_date", "")
+    end_date_str = request.GET.get("end_date", "")
+    export_action = request.GET.get("export", "")
+
+    # Parse dates
+    start_date = None
+    end_date = None
+
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            start_date = None
+
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            end_date = None
+
+    # --------------------------------------------------
+    # QUERY PAST TRANSACTIONS ONLY (before today)
+    # --------------------------------------------------
+    transactions_qs = (
+        Transaction.objects
+        .filter(transaction_date__lt=today)  # ONLY records BEFORE today
+        .order_by("-entry_timestamp")
+    )
+
+    # Apply date filters if provided
+    if start_date:
+        transactions_qs = transactions_qs.filter(transaction_date__gte=start_date)
+    if end_date:
+        # Ensure end_date is still before today
+        if end_date >= today:
+            end_date = yesterday
+        transactions_qs = transactions_qs.filter(transaction_date__lte=end_date)
+
+    # CSV Export
+    if export_action == "csv":
+        csv_content = TransactionService.export_transactions_csv(transactions_qs)
+
+        label = "past"
+        if start_date and end_date:
+            label = f"{start_date}_to_{end_date}"
+        elif start_date:
+            label = f"from_{start_date}"
+        elif end_date:
+            label = f"until_{end_date}"
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="past_transactions_{label}.csv"'
+        response.write(csv_content)
+        return response
+
+    # Calculate summary metrics for filtered past records
+    total_revenue = transactions_qs.filter(is_revenue_counted=True).aggregate(
+        total=Sum("fee_charged")
+    )["total"] or 0
+    total_transactions = transactions_qs.count()
+
+    # Yesterday's revenue specifically
+    yesterday_revenue = (
+        Transaction.objects
+        .filter(transaction_date=yesterday, is_revenue_counted=True)
+        .aggregate(total=Sum("fee_charged"))["total"]
+        or 0
+    )
+
+    # Paginate for display (limit to 200)
+    transactions = list(transactions_qs[:200])
+
+    context = {
+        "transactions": transactions,
+        "total_revenue": total_revenue,
+        "total_transactions": total_transactions,
+        "yesterday_revenue": yesterday_revenue,
+        "start_date": start_date_str,
+        "end_date": end_date_str,
+        "today": today.strftime("%Y-%m-%d"),
+        "yesterday": yesterday.strftime("%Y-%m-%d"),
+        "yesterday_display": yesterday.strftime("%B %d, %Y"),
+    }
+
+    return render(request, "terminal/past_transactions.html", context)
 
 
 # ===============================

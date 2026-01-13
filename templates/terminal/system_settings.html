@@ -180,6 +180,40 @@
           </small>
         </div>
 
+        <!-- QUEUE DISPLAY SETTINGS -->
+        <div class="border-top pt-4 mt-4">
+          <h5 class="rdfs-settings-section-title mb-2">
+            <i class="bi bi-display me-2"></i>
+            Queue Display Settings
+          </h5>
+          <p class="text-muted small mb-4">
+            Configure countdown timers and auto-refresh intervals for queue displays.
+          </p>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Countdown Duration (seconds)</label>
+              {{ form.countdown_duration_seconds }}
+              {% if form.countdown_duration_seconds.errors %}
+                <div class="text-danger small">{{ form.countdown_duration_seconds.errors|striptags }}</div>
+              {% endif %}
+              <small class="text-muted d-block mt-1">
+                Duration of countdown timer before state transitions (5-300 seconds).
+              </small>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Auto-Refresh Interval (seconds)</label>
+              {{ form.queue_refresh_interval_seconds }}
+              {% if form.queue_refresh_interval_seconds.errors %}
+                <div class="text-danger small">{{ form.queue_refresh_interval_seconds.errors|striptags }}</div>
+              {% endif %}
+              <small class="text-muted d-block mt-1">
+                How often queue displays auto-refresh (5-120 seconds). Default: 15.
+              </small>
+            </div>
+          </div>
+        </div>
+
         <!-- SEAT LIMITS -->
         <div class="border-top pt-4 mt-4">
           <h5 class="rdfs-settings-section-title mb-2">
