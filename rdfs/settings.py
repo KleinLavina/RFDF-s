@@ -17,6 +17,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 ENVIRONMENT = env('ENVIRONMENT', default='development')
 IS_PRODUCTION = ENVIRONMENT == 'production'
+USE_REDIS_CHANNEL_LAYER = env.bool('USE_REDIS_CHANNEL_LAYER', default=False)
 
 # ======================================================
 # SECURITY
@@ -172,14 +173,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ======================================================
 ASGI_APPLICATION = 'rdfs.asgi.application'
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+if USE_REDIS_CHANNEL_LAYER:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [("127.0.0.1", 6379)],
+            },
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
 
 # ======================================================
 # SESSION / SECURITY

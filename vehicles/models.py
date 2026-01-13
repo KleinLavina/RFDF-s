@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from django.core.files.base import ContentFile
 from cloudinary.models import CloudinaryField
+
 # ======================================================
 # ROUTE MODEL
 # ======================================================
@@ -90,9 +91,6 @@ class Driver(models.Model):
         blank=False,
         null=False,
     )
-
-
-
 
     emergency_contact_name = models.CharField(max_length=100, blank=True, null=True)
     emergency_contact_number = models.CharField(max_length=20, blank=True, null=True)

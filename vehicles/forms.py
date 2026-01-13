@@ -138,6 +138,9 @@ class VehicleRegistrationForm(forms.ModelForm):
             raise ValidationError(
                 f"❌ CR number is too long. Maximum 50 characters allowed (currently {len(value)} characters)."
             )
+
+        if not value.isdigit():
+            raise ValidationError("❌ CR number must contain digits only (no spaces or special characters).")
         
         # Check uniqueness excluding current instance
         if self.instance.pk:
@@ -169,6 +172,9 @@ class VehicleRegistrationForm(forms.ModelForm):
             raise ValidationError(
                 f"❌ OR number is too long. Maximum 50 characters allowed (currently {len(value)} characters)."
             )
+
+        if not value.isdigit():
+            raise ValidationError("❌ OR number must contain digits only (no spaces or special characters).")
         
         # Check uniqueness
         if self.instance.pk:
@@ -350,6 +356,9 @@ class VehicleRegistrationForm(forms.ModelForm):
             raise ValidationError(
                 f"❌ Registration number is too long. Maximum 50 characters allowed (currently {len(value)} characters)."
             )
+
+        if not re.fullmatch(r'[A-Z0-9\-]+', value):
+            raise ValidationError("❌ Registration number can only contain letters, numbers, and hyphens (no spaces or symbols).")
         
         # Check uniqueness
         if self.instance.pk:
@@ -493,12 +502,19 @@ class DriverRegistrationForm(forms.ModelForm):
         value = self.cleaned_data.get('license_number')
         if not value:
             return value
-
+    
         normalized = str(value).strip().upper()
+
+        if not re.fullmatch(r'[A-Z0-9\-]+', normalized):
+            raise ValidationError("❌ License number can only contain letters, numbers, and hyphens (no spaces or symbols).")
+
+        if len(normalized) < 5 or len(normalized) > 25:
+            raise ValidationError("❌ License number must be between 5 and 25 characters long.")
+    
         exists = Driver.objects.exclude(pk=self.instance.pk).filter(license_number=normalized).exists() if self.instance.pk else Driver.objects.filter(license_number=normalized).exists()
         if exists:
             raise ValidationError("❌ Driver license number is already registered.")
-
+    
         return normalized
 
     def clean(self):

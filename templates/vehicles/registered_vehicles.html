@@ -4,7 +4,9 @@
 {% block title %}Registered Vehicles | RDFS{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'styles/vehicles/edit_forms.css' %}">
 <link rel="stylesheet" href="{% static 'styles/vehicles/02.css' %}">
+
 
 <div class="rdfs-vehicles-scope p-4">
 
@@ -148,20 +150,21 @@
           <i class="fas fa-calendar-alt me-1"></i>
           Registered {{ vehicle.date_registered|date:"M d, Y" }}
         </div>
-
-  <button type="button"
-          class="btn btn-sm btn-outline-primary btn-edit-vehicle me-2"
-          data-edit-url="{% url 'vehicles:vehicle_edit_form' vehicle.id %}">
-    <i class="fas fa-pen me-1"></i> Edit
-  </button>
-        {% if user.is_superuser or user.role == 'admin' %}
-  <button class="btn-delete-vehicle btn-delete-item"
-        data-url="{% url 'vehicles:delete_vehicle' vehicle.id %}"
-        data-type="Vehicle"
-        data-name="{{ vehicle.vehicle_name }}">
-  <i class="fas fa-trash"></i> Delete
-</button>
-        {% endif %}
+        <div class="d-flex ms-auto gap-2">
+          <button type="button"
+                  class="btn btn-sm btn-outline-primary btn-edit-vehicle"
+                  data-edit-url="{% url 'vehicles:vehicle_edit_form' vehicle.id %}">
+            <i class="fas fa-pen me-1"></i> Edit
+          </button>
+          {% if user.is_superuser or user.role == 'admin' %}
+          <button class="btn-delete-vehicle btn-delete-item"
+                data-url="{% url 'vehicles:delete_vehicle' vehicle.id %}"
+                data-type="Vehicle"
+                data-name="{{ vehicle.vehicle_name }}">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+          {% endif %}
+        </div>
       </div>
 
     </div>
