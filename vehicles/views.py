@@ -464,19 +464,30 @@ def register_driver(request):
         else:
             # Form validation errors - Show each error specifically
             error_list = format_form_errors(form, "Driver Registration")
-            
-            if error_list:
-                # Show a summary message
+            missing_fields = []
+
+            for field_name in form.fields:
+                if form.errors.get(field_name):
+                    continue
+                field = form.fields[field_name]
+                if getattr(field, "required", False):
+                    raw_value = request.POST.get(field_name)
+                    if raw_value is None or not str(raw_value).strip():
+                        missing_fields.append(field.label or field_name.replace("_", " ").title())
+
+            if missing_fields:
+                for label in missing_fields:
+                    messages.error(
+                        request,
+                        f"❌ {label}: This field is required but was left blank."
+                    )
+
+            if error_list or missing_fields:
                 messages.error(
                     request,
-                    f"❌ Driver registration failed. Please correct {len(error_list)} error(s) below:"
+                    "❌ Driver registration failed. Please see the field-specific details above."
                 )
-                
-                # Show each specific error
-                for error_msg in error_list:
-                    messages.error(request, error_msg)
             else:
-                # Fallback if no specific errors found
                 messages.error(
                     request,
                     "❌ Driver registration failed. Please check all required fields and try again."
@@ -540,63 +551,49 @@ def register_vehicle(request):
         
         if form.is_valid():
             try:
-                # Save vehicle with commit=False to add extra validations
                 vehicle = form.save(commit=False)
-                
-                # Get cleaned data
                 cd = form.cleaned_data
-                
-                # Assign route if provided
-                if cd.get('route'):
-                    vehicle.route = cd['route']
-                
-                # Ensure all required fields are set
+
                 required_fields = {
                     'cr_number': 'CR Number',
                     'or_number': 'OR Number',
                     'vin_number': 'VIN Number',
                     'year_model': 'Year Model',
                     'registration_number': 'Registration Number',
-                    'license_plate': 'License Plate'
+                    'registration_expiry': 'Registration Expiry',
+                    'license_plate': 'License Plate',
+                    'vehicle_type': 'Vehicle Type',
+                    'ownership_type': 'Ownership Type',
+                    'assigned_driver': 'Assigned Driver',
                 }
-                
-                for field, label in required_fields.items():
-                    if field in cd:
-                        value = cd.get(field)
-                        if value:
-                            setattr(vehicle, field, value)
-                
-                # Run model validation
-                vehicle.full_clean()
-                
-                # Save the vehicle
+
+                missing_required = [
+                    label for field, label in required_fields.items()
+                    if not cd.get(field)
+                ]
+
+                if missing_required:
+                    for label in missing_required:
+                        messages.error(request, f"❌ {label} is required but missing.")
+                    messages.error(
+                        request,
+                        "❌ Vehicle registration failed. Please complete the required fields above."
+                    )
+                    raise ValidationError("Missing required fields.")
+
+                if cd.get('route'):
+                    vehicle.route = cd['route']
+
                 vehicle.save()
-                
-                # Success message with vehicle details
                 messages.success(
                     request,
-                    f"✅ Vehicle registered successfully! "
-                    f"Name: {vehicle.vehicle_name} | "
-                    f"Plate: {vehicle.license_plate} | "
-                    f"Type: {vehicle.get_vehicle_type_display()} | "
-                    f"Driver: {vehicle.assigned_driver.first_name} {vehicle.assigned_driver.last_name}"
+                    f"✅ Vehicle '{vehicle.vehicle_name}' registered successfully! "
+                    f"Plate: {vehicle.license_plate}"
                 )
                 return redirect('vehicles:registered_vehicles')
-                
+
             except ValidationError as ve:
-                # Model-level validation errors
-                maybe_show_plate_duplicate_toast(request, error=ve)
-                if hasattr(ve, 'message_dict'):
-                    for field, errors in ve.message_dict.items():
-                        field_label = field.replace('_', ' ').title()
-                        for error in errors:
-                            form.add_error(field if field in form.fields else None, error)
-                            messages.error(request, f"❌ {field_label}: {error}")
-                elif hasattr(ve, 'messages'):
-                    for error in ve.messages:
-                        messages.error(request, f"❌ {error}")
-                else:
-                    messages.error(request, f"❌ Validation Error: {str(ve)}")
+                handle_vehicle_validation_errors(request, form, ve)
                     
             except IntegrityError as ie:
                 if not maybe_show_plate_duplicate_toast(request, error=ie):

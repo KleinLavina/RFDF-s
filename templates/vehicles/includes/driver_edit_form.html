@@ -1,88 +1,3 @@
-<style>
-  .rdfs-edit-modal-form {
-    background: #ffffff;
-    color: #041b3f;
-  }
-
-  .rdfs-edit-form-panel {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-  }
-
-  .rdfs-edit-field-card {
-    background: #ffffff;
-    border: 1px solid #dce3f5;
-    border-radius: 1rem;
-    padding: 1rem 1.2rem;
-    box-shadow: 0 10px 25px rgba(9, 26, 63, 0.1);
-  }
-
-  .rdfs-edit-field-label {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #041b3f;
-    margin-bottom: 0.35rem;
-  }
-
-  .rdfs-edit-field-label i {
-    color: #2563eb;
-    font-size: 0.85rem;
-  }
-
-  .rdfs-edit-field-input input,
-  .rdfs-edit-field-input select,
-  .rdfs-edit-field-input textarea {
-    width: 100%;
-    border: 1px solid #c6d0ec;
-    border-radius: 0.8rem;
-    padding: 0.68rem 0.85rem;
-    font-size: 0.95rem;
-    color: #0c1d3f;
-    background: #ffffff;
-    transition: border 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .rdfs-edit-field-input input:focus,
-  .rdfs-edit-field-input select:focus,
-  .rdfs-edit-field-input textarea:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
-    outline: none;
-  }
-
-  .rdfs-edit-field-help {
-    font-size: 0.78rem;
-    color: #4c5674;
-    margin-top: 0.35rem;
-  }
-
-  .rdfs-edit-field-errors {
-    font-size: 0.8rem;
-    color: #c53030;
-    margin-top: 0.3rem;
-  }
-
-  .rdfs-edit-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
-  }
-
-  @media (max-width: 768px) {
-    .rdfs-edit-form-panel {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
-
 <form id="driverEditForm"
       method="post"
       enctype="multipart/form-data"
@@ -91,43 +6,242 @@
   {% csrf_token %}
 
   {% if form.non_field_errors %}
-    <div class="alert alert-danger">
+    <div class="alert alert-danger mb-3">
       {% for error in form.non_field_errors %}
-        <p class="mb-1">{{ error }}</p>
+        <div>{{ error }}</div>
       {% endfor %}
     </div>
   {% endif %}
 
-    <div class="rdfs-edit-form-panel">
-    {% for row in field_rows %}
-      <div class="rdfs-edit-field-card" style="grid-column: span {{ row.span }};">
-        <label for="{{ row.field.id_for_label }}" class="rdfs-edit-field-label">
-          <i class="fas {{ row.icon }}"></i>
-          {{ row.field.label }}
-        </label>
-        <div class="rdfs-edit-field-input">
-          {{ row.field }}
-          {% if row.field.help_text %}
-            <div class="rdfs-edit-field-help">{{ row.field.help_text }}</div>
-          {% endif %}
-        </div>
-        {% if row.field.errors %}
-          <div class="rdfs-edit-field-errors">
-            {% for error in row.field.errors %}
-              {{ error }}{% if not forloop.last %}<br>{% endif %}
-            {% endfor %}
+  <!-- Driver Photo -->
+  <div class="section-box">
+    <div class="section-title">
+      <i class="fas fa-camera me-2"></i> Driver Photo
+    </div>
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        {{ form.driver_photo.label_tag }}
+        {{ form.driver_photo }}
+        {% if form.driver_photo.errors %}
+          <div class="invalid-feedback d-block">
+            {{ form.driver_photo.errors.0 }}
+          </div>
+        {% endif %}
+        <small class="text-muted d-block mt-2">
+          <i class="fas fa-info-circle me-1"></i> Upload a clear, recent headshot (max 5MB).
+        </small>
+      </div>
+      <div class="col-md-6 text-center">
+        {% if driver.driver_photo %}
+          <img src="{{ driver.driver_photo.url }}"
+               alt="Driver photo"
+               class="rounded shadow-sm"
+               style="max-width: 200px; width: 100%; height: auto;">
+        {% else %}
+          <div class="alert alert-info mb-0">
+            No driver photo on record yet.
           </div>
         {% endif %}
       </div>
-    {% endfor %}
+    </div>
   </div>
 
-  <div class="rdfs-edit-actions">
+  <!-- Personal Information -->
+  <div class="section-box">
+    <div class="section-title">
+      <i class="fas fa-id-card me-2"></i> Personal Information
+    </div>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label required"><i class="fas fa-signature me-1"></i> First Name</label>
+        {{ form.first_name }}
+        {% if form.first_name.errors %}
+          <div class="invalid-feedback d-block">{{ form.first_name.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label"><i class="fas fa-signature me-1"></i> Middle Name</label>
+        {{ form.middle_name }}
+        {% if form.middle_name.errors %}
+          <div class="invalid-feedback d-block">{{ form.middle_name.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label required"><i class="fas fa-signature me-1"></i> Last Name</label>
+        {{ form.last_name }}
+        {% if form.last_name.errors %}
+          <div class="invalid-feedback d-block">{{ form.last_name.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label"><i class="fas fa-text-height me-1"></i> Suffix</label>
+        {{ form.suffix }}
+        {% if form.suffix.errors %}
+          <div class="invalid-feedback d-block">{{ form.suffix.errors.0 }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-birthday-cake me-1"></i> Birth Date</label>
+        {{ form.birth_date }}
+        {% if form.birth_date.errors %}
+          <div class="invalid-feedback d-block">{{ form.birth_date.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-map-marker-alt me-1"></i> Birth Place</label>
+        {{ form.birth_place }}
+        {% if form.birth_place.errors %}
+          <div class="invalid-feedback d-block">{{ form.birth_place.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-tint me-1"></i> Blood Type</label>
+        {{ form.blood_type }}
+        {% if form.blood_type.errors %}
+          <div class="invalid-feedback d-block">{{ form.blood_type.errors.0 }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact Information -->
+  <div class="section-box">
+    <div class="section-title">
+      <i class="fas fa-address-book me-2"></i> Contact Information
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label required"><i class="fas fa-mobile-alt me-1"></i> Mobile Number</label>
+        {{ form.mobile_number }}
+        <small class="text-muted"><i class="fas fa-info-circle me-1"></i> 09123456789 or +639123456789</small>
+        {% if form.mobile_number.errors %}
+          <div class="invalid-feedback d-block">{{ form.mobile_number.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label required"><i class="fas fa-envelope me-1"></i> Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+          <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Address Information -->
+  <div class="section-box">
+    <div class="section-title">
+      <i class="fas fa-home me-2"></i> Address Information
+    </div>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-road me-1"></i> Street</label>
+        {{ form.street }}
+        {% if form.street.errors %}
+          <div class="invalid-feedback d-block">{{ form.street.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-map-pin me-1"></i> Barangay</label>
+        {{ form.barangay }}
+        {% if form.barangay.errors %}
+          <div class="invalid-feedback d-block">{{ form.barangay.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-mail-bulk me-1"></i> ZIP Code</label>
+        {{ form.zip_code }}
+        {% if form.zip_code.errors %}
+          <div class="invalid-feedback d-block">{{ form.zip_code.errors.0 }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-md-6">
+        <label class="form-label required"><i class="fas fa-city me-1"></i> City / Municipality</label>
+        {{ form.city_municipality }}
+        {% if form.city_municipality.errors %}
+          <div class="invalid-feedback d-block">{{ form.city_municipality.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label required"><i class="fas fa-map me-1"></i> Province</label>
+        {{ form.province }}
+        {% if form.province.errors %}
+          <div class="invalid-feedback d-block">{{ form.province.errors.0 }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- License Information -->
+  <div class="section-box">
+    <div class="section-title">
+      <i class="fas fa-id-card me-2"></i> Driver's License
+    </div>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-file-alt me-1"></i> License Number</label>
+        {{ form.license_number }}
+        {% if form.license_number.errors %}
+          <div class="invalid-feedback d-block">{{ form.license_number.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-calendar-check me-1"></i> License Expiry</label>
+        {{ form.license_expiry }}
+        {% if form.license_expiry.errors %}
+          <div class="invalid-feedback d-block">{{ form.license_expiry.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-car me-1"></i> License Type</label>
+        <input type="text" class="form-control" value="Professional Driver's License" readonly>
+        <small class="text-muted d-block mt-1"><i class="fas fa-info-circle me-1"></i> Locked by system</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency Contact -->
+  <div class="section-box">
+    <div class="section-title">
+      <i class="fas fa-phone-alt me-2"></i> Emergency Contact
+    </div>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-user-friends me-1"></i> Contact Name</label>
+        {{ form.emergency_contact_name }}
+        {% if form.emergency_contact_name.errors %}
+          <div class="invalid-feedback d-block">{{ form.emergency_contact_name.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-phone me-1"></i> Contact Number</label>
+        {{ form.emergency_contact_number }}
+        {% if form.emergency_contact_number.errors %}
+          <div class="invalid-feedback d-block">{{ form.emergency_contact_number.errors.0 }}</div>
+        {% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label required"><i class="fas fa-heart me-1"></i> Relationship</label>
+        {{ form.emergency_contact_relationship }}
+        {% if form.emergency_contact_relationship.errors %}
+          <div class="invalid-feedback d-block">{{ form.emergency_contact_relationship.errors.0 }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mt-4">
     <button type="button" class="btn btn-outline-secondary" data-modal-close>
       Cancel
     </button>
     <button type="submit" class="btn btn-primary">
-      Save changes
+      <i class="fas fa-save me-1"></i> Save Changes
     </button>
   </div>
 </form>
