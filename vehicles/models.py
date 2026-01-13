@@ -242,11 +242,7 @@ class Vehicle(models.Model):
             qr_img.save(buffer, format="PNG")
 
             file_name = f"vehicle_{self.id}_qr.png"
-            self.qr_code.save(
-                file_name,
-                ContentFile(buffer.getvalue()),
-                save=False
-            )
+            self.qr_code = ContentFile(buffer.getvalue(), name=file_name)
 
             super().save(update_fields=["qr_code", "qr_value"])
 
