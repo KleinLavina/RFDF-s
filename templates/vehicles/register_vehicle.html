@@ -5,6 +5,56 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'styles/vehicles/03.css' %}">
+<link rel="stylesheet" href="{% static 'styles/vehicles/driver-search-dropdown.css' %}">
+<link rel="stylesheet" href="{% static 'styles/vehicles/vehicle-registration.css' %}">
+
+<!-- Global z-index overrides for dropdowns and calendars -->
+<style>
+/* Ensure all dropdowns and calendars appear on top */
+.select2-container,
+.select2-container--open,
+.select2-dropdown {
+  z-index: 999999 !important;
+}
+
+/* Native date picker calendar */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  z-index: 999999 !important;
+}
+
+/* Driver search dropdown - MAXIMUM PRIORITY */
+.driver-search-wrapper {
+  z-index: 100000 !important;
+  position: relative !important;
+}
+
+.driver-search-dropdown {
+  z-index: 999999 !important;
+  position: absolute !important;
+}
+
+/* Ensure section boxes stay below dropdowns */
+.section-box {
+  z-index: 1 !important;
+  position: relative !important;
+}
+
+/* Form container should not interfere */
+.form-container {
+  position: relative;
+  z-index: auto;
+}
+</style>
+
+<!-- Driver Data for Searchable Dropdown -->
+<script id="drivers-data" type="application/json">
+  {{ drivers_json|safe }}
+</script>
+
+<!-- Validation Config for Frontend -->
+<script id="vehicle-validation-config" type="application/json">
+  {{ validation_config|safe }}
+</script>
 <div class="container py-4 form-container">
   <div class="rdfs-page-header">
     <div>
@@ -85,7 +135,7 @@
           </label>
           {{ form.assigned_driver }}
           {% if form.assigned_driver.errors %}
-            <div class="invalid-feedback">
+            <div class="invalid-feedback d-block">
               <i class="fas fa-exclamation-circle me-1"></i> {{ form.assigned_driver.errors.0 }}
             </div>
           {% else %}
@@ -94,7 +144,7 @@
             </div>
           {% endif %}
           <small class="form-text text-muted">
-            <i class="fas fa-lightbulb me-1"></i> Select the driver assigned to this vehicle
+            <i class="fas fa-lightbulb me-1"></i> Search and select the driver assigned to this vehicle
           </small>
         </div>
         
@@ -290,32 +340,27 @@
         </div>
         
         <div class="form-group col-md-6">
-          <div class="date-wrapper">
-            <label for="{{ form.registration_expiry.id_for_label }}" class="form-label required">
-              <i class="fas fa-calendar-times me-1"></i> Registration Expiry
-            </label>
-            <input type="text" 
-                   name="{{ form.registration_expiry.name }}"
-                   id="{{ form.registration_expiry.id_for_label }}"
-                   class="form-control {% if form.registration_expiry.errors %}is-invalid{% endif %}"
-                   placeholder="YYYY-MM-DD"
-                   value="{{ form.registration_expiry.value|default:'' }}"
-                   autocomplete="off"
-                   required>
-            {% if form.registration_expiry.errors %}
-              <div class="invalid-feedback">
-                <i class="fas fa-exclamation-circle me-1"></i> {{ form.registration_expiry.errors.0 }}
-              </div>
-            {% else %}
-              <div class="invalid-feedback">
-                <i class="fas fa-exclamation-circle me-1"></i> Please select the registration expiry date.
-              </div>
-            {% endif %}
-            <div id="calendar_regexpiry" class="custom-calendar"></div>
-            <small class="form-text text-muted">
-              <i class="fas fa-calendar-check me-1"></i> Click to select the registration expiry date
-            </small>
-          </div>
+          <label for="{{ form.registration_expiry.id_for_label }}" class="form-label required">
+            <i class="fas fa-calendar-times me-1"></i> Registration Expiry
+          </label>
+          <input type="date" 
+                 name="{{ form.registration_expiry.name }}"
+                 id="{{ form.registration_expiry.id_for_label }}"
+                 class="form-control {% if form.registration_expiry.errors %}is-invalid{% endif %}"
+                 value="{{ form.registration_expiry.value|default:'' }}"
+                 required>
+          {% if form.registration_expiry.errors %}
+            <div class="invalid-feedback">
+              <i class="fas fa-exclamation-circle me-1"></i> {{ form.registration_expiry.errors.0 }}
+            </div>
+          {% else %}
+            <div class="invalid-feedback">
+              <i class="fas fa-exclamation-circle me-1"></i> Please select the registration expiry date.
+            </div>
+          {% endif %}
+          <small class="form-text text-muted">
+            <i class="fas fa-calendar-check me-1"></i> Select the registration expiry date (must be valid)
+          </small>
         </div>
       </div>
 
@@ -354,6 +399,34 @@
     </div>
   </form>
 </div>
+
+<!-- Load Driver Search Dropdown -->
+<script src="{% static 'js/driver-search-dropdown.js' %}"></script>
+
+<!-- Load Vehicle Validation -->
+<script src="{% static 'js/vehicle-validation.js' %}"></script>
+
+<script>
+// Initialize Driver Search Dropdown
+document.addEventListener('DOMContentLoaded', function() {
+    const driversDataElement = document.getElementById('drivers-data');
+    if (driversDataElement) {
+        try {
+            const driversData = JSON.parse(driversDataElement.textContent);
+            window.driverDropdown = initDriverSearchDropdown('id_assigned_driver', driversData);
+        } catch (e) {
+            console.error('Failed to initialize driver search dropdown:', e);
+        }
+    }
+    
+    // Set min date for registration_expiry to today
+    const regExpiryInput = document.getElementById('id_registration_expiry');
+    if (regExpiryInput) {
+        const today = new Date().toISOString().split('T')[0];
+        regExpiryInput.setAttribute('min', today);
+    }
+});
+</script>
 
 <!-- Select2 -->
 <link href="{% static 'css/select2.min.css' %}" rel="stylesheet">
@@ -434,85 +507,8 @@
 
 <script>
 $(document).ready(function() {
-  // Initialize Select2 for route
+  // Initialize Select2 for route only (driver dropdown is now custom)
   $('#id_route').select2({ width: '100%' });
-  
-  // Initialize Select2 for assigned driver with custom template
-  $('#id_assigned_driver').select2({
-    width: '100%',
-    templateResult: formatDriverOption,
-    templateSelection: formatDriverSelection,
-    escapeMarkup: function(m) { return m; }
-  });
-  
-  // Function to format driver option in dropdown
-  function formatDriverOption(driver) {
-    if (!driver.id) {
-      return driver.text;
-    }
-    
-    // Get driver data from element
-    var $driver = $(driver.element);
-    var driverId = $driver.data('driver-id');
-    var photoUrl = $driver.data('photo-url');
-    var driverName = driver.text;
-    
-    if (!driverName) {
-      return driver.text;
-    }
-    
-    var photoHtml = '';
-    if (photoUrl) {
-      photoHtml = `<img src="${photoUrl}" alt="${driverName}" class="driver-pfp-small">`;
-    } else {
-      photoHtml = `<div class="driver-pfp-small"><i class="fas fa-user"></i></div>`;
-    }
-    
-    return $(`
-      <div class="driver-option">
-        ${photoHtml}
-        <div class="driver-info-small">
-          <div class="driver-name-small">${driverName}</div>
-          <div class="driver-id-small">ID: ${driverId || 'N/A'}</div>
-        </div>
-      </div>
-    `);
-  }
-  
-  // Function to format selected driver
-  function formatDriverSelection(driver) {
-    if (!driver.id) {
-      return driver.text;
-    }
-    
-    var $driver = $(driver.element);
-    var driverName = driver.text;
-    
-    if (!driverName) {
-      return driver.text;
-    }
-    
-    return $(`
-      <div class="driver-option" style="padding: 0;">
-        <div class="driver-info-small">
-          <div class="driver-name-small">${driverName}</div>
-        </div>
-      </div>
-    `);
-  }
-  
-  // Add data attributes to driver options
-  $('#id_assigned_driver option').each(function() {
-    var $option = $(this);
-    var driverId = $option.val();
-    if (driverId) {
-      // You need to fetch driver data - this should be done in your view
-      // For now, we'll add placeholder data
-      $option.data('driver-id', driverId);
-      // You would need to add the photo URL as a data attribute from your view
-      // Example: data-photo-url="{{ driver.driver_photo.url }}"
-    }
-  });
 });
 
 </script>
@@ -533,123 +529,6 @@ for (let y = 2000; y <= currentYear; y++) {
 // Make dropdown height short
 yearSelect.style.maxHeight = "38px";
 yearSelect.style.padding = "6px 10px";
-</script>
-
-
-<!-- CUSTOM CALENDAR -->
-<script>
-function createCalendar(inputId, calendarId, minYear, maxYear) {
-
-  const input = document.getElementById(inputId);
-  const wrapper = document.getElementById(inputId).parentElement;
-  const box = wrapper.querySelector(".custom-calendar");
-
-
-  input.type = "text"; // force text for styling
-
-  let today = new Date();
-  let month = today.getMonth();
-  let year = today.getFullYear();
-
-  function render() {
-    box.innerHTML = "";
-
-    // HEADER
-    let header = document.createElement("div");
-    header.className = "cal-header";
-
-    // MONTH SELECT
-    let monthSel = document.createElement("select");
-    const monthNames = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
-    ];
-
-    monthNames.forEach((m, i) => {
-      let opt = document.createElement("option");
-      opt.value = i;
-      opt.textContent = m;
-      if (i === month) opt.selected = true;
-      monthSel.appendChild(opt);
-    });
-
-    // YEAR SELECT
-    let yearSel = document.createElement("select");
-    yearSel.className = "year-select";
-
-    for (let y = minYear; y <= maxYear; y++) {
-      let opt = document.createElement("option");
-      opt.value = y;
-      opt.textContent = y;
-      if (y === year) opt.selected = true;
-      yearSel.appendChild(opt);
-    }
-
-    monthSel.onchange = () => { month = parseInt(monthSel.value); render(); };
-    yearSel.onchange = () => { year = parseInt(yearSel.value); render(); };
-
-    header.appendChild(monthSel);
-    header.appendChild(yearSel);
-    box.appendChild(header);
-
-    // WEEKDAYS
-    let daysRow = document.createElement("div");
-    daysRow.className = "cal-days";
-    ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].forEach(d => {
-      let el = document.createElement("div");
-      el.textContent = d;
-      daysRow.appendChild(el);
-    });
-    box.appendChild(daysRow);
-
-    // DAYS GRID
-    let grid = document.createElement("div");
-    grid.className = "cal-grid";
-    box.appendChild(grid);
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-
-    for (let i = 0; i < firstDay; i++) {
-      grid.appendChild(document.createElement("div"));
-    }
-
-    for (let d = 1; d <= totalDays; d++) {
-      let day = document.createElement("div");
-      day.className = "cal-day";
-      day.textContent = d;
-
-      let today = new Date();
-      if (year === today.getFullYear() &&
-          month === today.getMonth() &&
-          d === today.getDate()) {
-        day.classList.add("today");
-      }
-
-      day.onclick = () => {
-        input.value = `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        box.style.display = "none";
-      };
-
-      grid.appendChild(day);
-    }
-  }
-
-  // OPEN CALENDAR BELOW INPUT
-  input.addEventListener("click", () => {
-    box.style.display = "block";
-    render();
-  });
-
-  // CLOSE CALENDAR WHEN CLICKING OUTSIDE
-  document.addEventListener("click", (e) => {
-    if (!wrapper.contains(e.target)) {
-      box.style.display = "none";
-    }
-  });
-}
-
-createCalendar("id_registration_expiry", "calendar_regexpiry", 2000, 2045);
 </script>
 
 {% endblock %}

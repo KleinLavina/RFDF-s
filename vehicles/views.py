@@ -217,6 +217,19 @@ def maybe_show_plate_duplicate_toast(request, form=None, error=None):
             return True
 
     return False
+
+
+def handle_vehicle_validation_errors(request, form, validation_error):
+    """
+    Handle ValidationError from vehicle registration and display specific error messages.
+    """
+    if hasattr(validation_error, 'message_dict'):
+        for field, errors in validation_error.message_dict.items():
+            field_label = field.replace('_', ' ').title()
+            for error in errors:
+                messages.error(request, f"❌ {field_label}: {error}")
+    else:
+        messages.error(request, f"❌ Validation Error: {str(validation_error)}")
 # -------------------------
 # OCR ENDPOINT
 # -------------------------
@@ -506,9 +519,14 @@ def register_driver(request):
     # Get total drivers for display
     total_drivers = Driver.objects.count()
     
+    # Import validation config generator
+    from .validation_rules import get_frontend_validation_config
+    import json
+    
     context = {
         'form': form,
         'total_drivers': total_drivers,
+        'validation_config': json.dumps(get_frontend_validation_config()),
     }
     
     return render(request, 'vehicles/register_driver.html', context)
@@ -641,10 +659,29 @@ def register_vehicle(request):
     vehicles = Vehicle.objects.select_related('assigned_driver', 'route').order_by('-date_registered')
     total_vehicles = vehicles.count()
     
+    # Prepare driver data for searchable dropdown
+    drivers = Driver.objects.all().order_by('first_name', 'last_name')
+    drivers_data = []
+    for driver in drivers:
+        driver_dict = {
+            'id': driver.id,
+            'first_name': driver.first_name,
+            'last_name': driver.last_name,
+            'driver_id': driver.driver_id,
+            'photo_url': driver.driver_photo.url if driver.driver_photo else None,
+        }
+        drivers_data.append(driver_dict)
+    
+    # Import validation config generator
+    from .vehicle_validation_rules import get_vehicle_frontend_validation_config
+    import json
+    
     context = {
         'form': form,
         'vehicles': vehicles,
         'total_vehicles': total_vehicles,
+        'drivers_json': json.dumps(drivers_data),
+        'validation_config': json.dumps(get_vehicle_frontend_validation_config()),
     }
     
     return render(request, 'vehicles/register_vehicle.html', context)

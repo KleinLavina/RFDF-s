@@ -5,7 +5,27 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'styles/vehicles/01.css' %}">
-<!-- Font Awesome Icons -->
+<link rel="stylesheet" href="{% static 'styles/vehicles/driver-registration.css' %}">
+
+<!-- Global z-index overrides for dropdowns and calendars -->
+<style>
+/* Ensure all dropdowns and calendars appear on top */
+.select2-container,
+.select2-container--open,
+.select2-dropdown {
+  z-index: 99999 !important;
+}
+
+/* Native date picker calendar */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  z-index: 99999 !important;
+}
+</style>
+
+<!-- Validation Configuration (JSON) -->
+<script id="validation-config" type="application/json">
+  {{ validation_config|safe }}
+</script>
 
 
 <div class="container py-4 form-container">
@@ -57,17 +77,19 @@
     <!-- 📸 DRIVER PHOTO CAPTURE SECTION -->
     <div class="section-box camera-section">
       <div class="section-title">
-        <i class="fas fa-camera me-2"></i> Driver Photo Capture
+        <i class="fas fa-camera"></i>
+        <span>Driver Photo Capture</span>
       </div>
 
       <div class="camera-card">
         <!-- Start Camera Button -->
         <div id="startCameraSection" class="text-center mb-3">
           <button type="button" id="startCameraBtn" class="btn btn-primary btn-lg">
-            <i class="fas fa-video me-2"></i>
+            <i class="fas fa-video"></i>
             Open Camera
           </button>
-          <p class="text-muted small mt-2 mb-0">
+          <p class="text-muted small mt-3 mb-0">
+            <i class="fas fa-info-circle"></i>
             Click to allow camera access for driver photo capture
           </p>
         </div>
@@ -83,25 +105,30 @@
         <canvas id="photoCanvas" style="display:none;"></canvas>
         <img id="photoPreview"
             class="camera-preview"
-            style="display:none;">
+            style="display:none;"
+            alt="Captured driver photo">
 
         <!-- Hidden file input (Django needs this) -->
         <input type="file"
               name="driver_photo"
               id="id_driver_photo"
               style="display:none;"
-              required>
+              required
+              aria-label="Driver photo upload">
 
         <button type="button" class="capture-btn" id="captureBtn" disabled>
-          <i class="fas fa-camera me-1"></i> Capture Photo
+          <i class="fas fa-camera"></i>
+          <span>Capture Photo</span>
         </button>
 
         <div class="camera-hint">
-          <i class="fas fa-info-circle me-1"></i> Camera capture only • No file uploads allowed
+          <i class="fas fa-shield-alt"></i>
+          Camera capture only • No file uploads allowed
         </div>
 
         {% if form.driver_photo.errors %}
-          <div class="invalid-feedback d-block mt-2">
+          <div class="invalid-feedback d-block mt-3">
+            <i class="fas fa-exclamation-circle"></i>
             {{ form.driver_photo.errors.0 }}
           </div>
         {% endif %}
@@ -112,122 +139,169 @@
     <!-- PERSONAL INFORMATION -->
     <div class="section-box">
       <div class="section-title">
-        <i class="fas fa-id-card me-2"></i> Personal Information
+        <i class="fas fa-id-card"></i>
+        <span>Personal Information</span>
       </div>
 
       <div class="row g-3">
         <div class="col-md-3">
           <label for="id_first_name" class="form-label required">
-            <i class="fas fa-signature me-1"></i> First Name
+            <i class="fas fa-user"></i>
+            <span>First Name</span>
           </label>
           <input type="text" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" 
                  id="id_first_name" name="first_name" 
                  value="{{ form.first_name.value|default:'' }}" 
-                 placeholder="Enter first name"
-                 required>
-          {% if form.first_name.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., Juan"
+                 required
+                 aria-describedby="first_name_help">
+          <div class="invalid-feedback">
+            {% if form.first_name.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.first_name.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              First name is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-3">
           <label for="id_middle_name" class="form-label">
-            <i class="fas fa-signature me-1"></i> Middle Name
+            <i class="fas fa-user-circle"></i>
+            <span>Middle Name</span>
           </label>
           <input type="text" class="form-control {% if form.middle_name.errors %}is-invalid{% endif %}" 
                  id="id_middle_name" name="middle_name" 
                  value="{{ form.middle_name.value|default:'' }}"
-                 placeholder="Enter middle name (optional)">
-          {% if form.middle_name.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., Santos (optional)"
+                 aria-describedby="middle_name_help">
+          <div class="invalid-feedback">
+            {% if form.middle_name.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.middle_name.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Invalid middle name.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-3">
           <label for="id_last_name" class="form-label required">
-            <i class="fas fa-signature me-1"></i> Last Name
+            <i class="fas fa-user-tag"></i>
+            <span>Last Name</span>
           </label>
           <input type="text" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" 
                  id="id_last_name" name="last_name" 
                  value="{{ form.last_name.value|default:'' }}" 
-                 placeholder="Enter last name"
-                 required>
-          {% if form.last_name.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., Dela Cruz"
+                 required
+                 aria-describedby="last_name_help">
+          <div class="invalid-feedback">
+            {% if form.last_name.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.last_name.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Last name is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-3">
           <label for="id_suffix" class="form-label">
-            <i class="fas fa-text-height me-1"></i> Suffix
+            <i class="fas fa-text-height"></i>
+            <span>Suffix</span>
           </label>
           <input type="text" class="form-control {% if form.suffix.errors %}is-invalid{% endif %}" 
                  id="id_suffix" name="suffix" 
                  value="{{ form.suffix.value|default:'' }}"
-                 placeholder="e.g., Jr., Sr., III">
-          {% if form.suffix.errors %}
-            <div class="invalid-feedback">
+                 placeholder="Jr., Sr., III (optional)"
+                 aria-describedby="suffix_help">
+          <div class="invalid-feedback">
+            {% if form.suffix.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.suffix.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Invalid suffix.
+            {% endif %}
+          </div>
         </div>
       </div>
 
       <div class="row g-3 mt-1">
         <div class="col-md-4">
-          <label class="form-label required">
-            <i class="fas fa-birthday-cake me-1"></i> Birth Date
+          <label for="id_birth_date" class="form-label required">
+            <i class="fas fa-birthday-cake"></i>
+            <span>Birth Date</span>
           </label>
-          <div class="date-wrapper">
-            {{ form.birth_date }}
-            <div class="custom-calendar" id="calendar_birth"></div>
+          <input type="date" 
+                 class="form-control {% if form.birth_date.errors %}is-invalid{% endif %}" 
+                 id="id_birth_date" 
+                 name="birth_date" 
+                 value="{{ form.birth_date.value|default:'' }}"
+                 required
+                 aria-describedby="birth_date_help">
+          <small class="form-text text-muted" id="birth_date_help">
+            <i class="fas fa-info-circle"></i>
+            Must be at least 18 years old
+          </small>
+          <div class="invalid-feedback">
+            {% if form.birth_date.errors %}
+              <i class="fas fa-exclamation-circle"></i>
+              {{ form.birth_date.errors.0 }}
+            {% else %}
+              Birth date is required.
+            {% endif %}
           </div>
         </div>
 
         <div class="col-md-4">
           <label for="id_birth_place" class="form-label required">
-            <i class="fas fa-map-marker-alt me-1"></i> Birth Place
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Birth Place</span>
           </label>
           <input type="text" class="form-control {% if form.birth_place.errors %}is-invalid{% endif %}" 
                  id="id_birth_place" name="birth_place" 
                  value="{{ form.birth_place.value|default:'' }}" 
-                 placeholder="City/Municipality, Province"
-                 required>
-          {% if form.birth_place.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., Manila, Metro Manila"
+                 required
+                 aria-describedby="birth_place_help">
+          <div class="invalid-feedback">
+            {% if form.birth_place.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.birth_place.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Birth place is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-4">
           <label for="id_blood_type" class="form-label required">
-            <i class="fas fa-tint me-1"></i> Blood Type
+            <i class="fas fa-tint"></i>
+            <span>Blood Type</span>
           </label>
           <select class="form-select {% if form.blood_type.errors %}is-invalid{% endif %}" 
-                 id="id_blood_type" name="blood_type" required>
-            <option value="" disabled {% if not form.blood_type.value %}selected{% endif %}>Select blood type</option>
-            <option value="A+" {% if form.blood_type.value == 'A+' %}selected{% endif %}>A+</option>
-            <option value="A-" {% if form.blood_type.value == 'A-' %}selected{% endif %}>A-</option>
-            <option value="B+" {% if form.blood_type.value == 'B+' %}selected{% endif %}>B+</option>
-            <option value="B-" {% if form.blood_type.value == 'B-' %}selected{% endif %}>B-</option>
-            <option value="AB+" {% if form.blood_type.value == 'AB+' %}selected{% endif %}>AB+</option>
-            <option value="AB-" {% if form.blood_type.value == 'AB-' %}selected{% endif %}>AB-</option>
-            <option value="O+" {% if form.blood_type.value == 'O+' %}selected{% endif %}>O+</option>
-            <option value="O-" {% if form.blood_type.value == 'O-' %}selected{% endif %}>O-</option>
+                 id="id_blood_type" name="blood_type" required
+                 aria-describedby="blood_type_help">
+            <option value="" disabled {% if not form.blood_type.value %}selected{% endif %}>Select your blood type</option>
+            <option value="A+" {% if form.blood_type.value == 'A+' %}selected{% endif %}>A+ (A Positive)</option>
+            <option value="A-" {% if form.blood_type.value == 'A-' %}selected{% endif %}>A- (A Negative)</option>
+            <option value="B+" {% if form.blood_type.value == 'B+' %}selected{% endif %}>B+ (B Positive)</option>
+            <option value="B-" {% if form.blood_type.value == 'B-' %}selected{% endif %}>B- (B Negative)</option>
+            <option value="AB+" {% if form.blood_type.value == 'AB+' %}selected{% endif %}>AB+ (AB Positive)</option>
+            <option value="AB-" {% if form.blood_type.value == 'AB-' %}selected{% endif %}>AB- (AB Negative)</option>
+            <option value="O+" {% if form.blood_type.value == 'O+' %}selected{% endif %}>O+ (O Positive)</option>
+            <option value="O-" {% if form.blood_type.value == 'O-' %}selected{% endif %}>O- (O Negative)</option>
             <option value="N/A" {% if form.blood_type.value == 'N/A' %}selected{% endif %}>Prefer not to say</option>
           </select>
-          {% if form.blood_type.errors %}
-            <div class="invalid-feedback">
+          <div class="invalid-feedback">
+            {% if form.blood_type.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.blood_type.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Blood type is required.
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -236,43 +310,59 @@
     <!-- CONTACT INFORMATION -->
     <div class="section-box">
       <div class="section-title">
-        <i class="fas fa-address-book me-2"></i> Contact Information
+        <i class="fas fa-address-book"></i>
+        <span>Contact Information</span>
       </div>
 
       <div class="row g-3">
         <div class="col-md-6">
           <label for="id_mobile_number" class="form-label required">
-            <i class="fas fa-mobile-alt me-1"></i> Mobile Number
+            <i class="fas fa-mobile-alt"></i>
+            <span>Mobile Number</span>
           </label>
           <input type="tel" class="form-control {% if form.mobile_number.errors %}is-invalid{% endif %}" 
                  id="id_mobile_number" name="mobile_number" 
                  value="{{ form.mobile_number.value|default:'' }}" 
-                 placeholder="e.g., 09123456789 or +639123456789"
-                 required>
-          <small class="form-text text-muted">
-            <i class="fas fa-info-circle me-1"></i> Format: 09123456789 or +639123456789
+                 placeholder="e.g., 09171234567"
+                 required
+                 aria-describedby="mobile_help">
+          <small class="form-text text-muted" id="mobile_help">
+            <i class="fas fa-info-circle"></i>
+            Format: 09XXXXXXXXX or +639XXXXXXXXX
           </small>
-          {% if form.mobile_number.errors %}
-            <div class="invalid-feedback">
+          <div class="invalid-feedback">
+            {% if form.mobile_number.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.mobile_number.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Mobile number is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-6">
           <label for="id_email" class="form-label required">
-            <i class="fas fa-envelope me-1"></i> Email Address
+            <i class="fas fa-envelope"></i>
+            <span>Email Address</span>
           </label>
           <input type="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
                  id="id_email" name="email" 
                  value="{{ form.email.value|default:'' }}" 
-                 placeholder="e.g., juan.delacruz@example.com"
-                 required>
-          {% if form.email.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., juan.delacruz@email.com"
+                 required
+                 aria-describedby="email_help">
+          <small class="form-text text-muted" id="email_help">
+            <i class="fas fa-info-circle"></i>
+            We'll use this for important notifications
+          </small>
+          <div class="invalid-feedback">
+            {% if form.email.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.email.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Email address is required.
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -284,136 +374,191 @@
         <i class="fas fa-home me-2"></i> Address Information
       </div>
 
+    <!-- ADDRESS INFORMATION -->
+    <div class="section-box">
+      <div class="section-title">
+        <i class="fas fa-home"></i>
+        <span>Address Information</span>
+      </div>
+
       <div class="row g-3">
         <div class="col-md-4">
           <label for="id_street" class="form-label required">
-            <i class="fas fa-road me-1"></i> Street
+            <i class="fas fa-road"></i>
+            <span>Street Address</span>
           </label>
           <input type="text" class="form-control {% if form.street.errors %}is-invalid{% endif %}" 
                  id="id_street" name="street" 
                  value="{{ form.street.value|default:'' }}" 
-                 placeholder="e.g., 123 Main Street"
-                 required>
-          {% if form.street.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., 123 Rizal Street"
+                 required
+                 aria-describedby="street_help">
+          <div class="invalid-feedback">
+            {% if form.street.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.street.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Street address is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-4">
           <label for="id_barangay" class="form-label required">
-            <i class="fas fa-map-pin me-1"></i> Barangay
+            <i class="fas fa-map-pin"></i>
+            <span>Barangay</span>
           </label>
           <input type="text" class="form-control {% if form.barangay.errors %}is-invalid{% endif %}" 
                  id="id_barangay" name="barangay" 
                  value="{{ form.barangay.value|default:'' }}" 
-                 placeholder="e.g., Barangay 123"
-                 required>
-          {% if form.barangay.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., Barangay San Antonio"
+                 required
+                 aria-describedby="barangay_help">
+          <div class="invalid-feedback">
+            {% if form.barangay.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.barangay.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Barangay is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-4">
           <label for="id_zip_code" class="form-label required">
-            <i class="fas fa-mail-bulk me-1"></i> ZIP Code
+            <i class="fas fa-mail-bulk"></i>
+            <span>ZIP Code</span>
           </label>
           <input type="text" class="form-control {% if form.zip_code.errors %}is-invalid{% endif %}" 
                  id="id_zip_code" name="zip_code" 
                  value="{{ form.zip_code.value|default:'' }}" 
                  placeholder="e.g., 1000"
                  pattern="[0-9]{4}"
-                 title="Please enter a valid 4-digit ZIP code"
-                 required>
-          <small class="form-text text-muted">
-            <i class="fas fa-info-circle me-1"></i> 4-digit ZIP code
+                 maxlength="4"
+                 required
+                 aria-describedby="zip_help">
+          <small class="form-text text-muted" id="zip_help">
+            <i class="fas fa-info-circle"></i>
+            4-digit postal code
           </small>
-          {% if form.zip_code.errors %}
-            <div class="invalid-feedback">
+          <div class="invalid-feedback">
+            {% if form.zip_code.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.zip_code.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              ZIP code is required.
+            {% endif %}
+          </div>
         </div>
       </div>
 
       <div class="row g-3 mt-1">
         <div class="col-md-6">
           <label for="id_city_municipality" class="form-label required">
-            <i class="fas fa-city me-1"></i> City / Municipality
+            <i class="fas fa-city"></i>
+            <span>City / Municipality</span>
           </label>
           <input type="text" class="form-control {% if form.city_municipality.errors %}is-invalid{% endif %}" 
                  id="id_city_municipality" name="city_municipality" 
                  value="{{ form.city_municipality.value|default:'' }}" 
-                 placeholder="e.g., Manila, Quezon City"
-                 required>
-          {% if form.city_municipality.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., Quezon City"
+                 required
+                 aria-describedby="city_help">
+          <div class="invalid-feedback">
+            {% if form.city_municipality.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.city_municipality.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              City/Municipality is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-6">
           <label for="id_province" class="form-label required">
-            <i class="fas fa-map me-1"></i> Province
+            <i class="fas fa-map"></i>
+            <span>Province</span>
           </label>
           <input type="text" class="form-control {% if form.province.errors %}is-invalid{% endif %}" 
                  id="id_province" name="province" 
                  value="{{ form.province.value|default:'' }}" 
-                 placeholder="e.g., Metro Manila, Bulacan"
-                 required>
-          {% if form.province.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., Metro Manila"
+                 required
+                 aria-describedby="province_help">
+          <div class="invalid-feedback">
+            {% if form.province.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.province.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Province is required.
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
-
-
     <!-- LICENSE INFORMATION -->
     <div class="section-box">
       <div class="section-title">
-        <i class="fas fa-id-card me-2"></i> Driver's License Information
+        <i class="fas fa-id-card-alt"></i>
+        <span>Driver's License Information</span>
       </div>
 
       <div class="row g-3">
         <div class="col-md-4">
           <label for="id_license_number" class="form-label required">
-            <i class="fas fa-file-alt me-1"></i> License Number
+            <i class="fas fa-file-alt"></i>
+            <span>License Number</span>
           </label>
           <input type="text" class="form-control {% if form.license_number.errors %}is-invalid{% endif %}" 
                  id="id_license_number" name="license_number" 
                  value="{{ form.license_number.value|default:'' }}" 
-                 placeholder="Enter license number"
-                 required>
-          <small class="form-text text-muted">
-            <i class="fas fa-info-circle me-1"></i> Enter your driver's license number (minimum 5 characters)
+                 placeholder="e.g., N01-12-345678"
+                 required
+                 aria-describedby="license_help">
+          <small class="form-text text-muted" id="license_help">
+            <i class="fas fa-info-circle"></i>
+            Enter your professional driver's license number
           </small>
-          {% if form.license_number.errors %}
-            <div class="invalid-feedback">
+          <div class="invalid-feedback">
+            {% if form.license_number.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.license_number.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              License number is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-4">
-          <label class="form-label required">
-            <i class="fas fa-calendar-times me-1"></i> License Expiry
+          <label for="id_license_expiry" class="form-label required">
+            <i class="fas fa-calendar-times"></i>
+            <span>License Expiry Date</span>
           </label>
-          <div class="date-wrapper">
-            {{ form.license_expiry }}
-            <div class="custom-calendar" id="calendar_expiry"></div>
+          <input type="date" 
+                 class="form-control {% if form.license_expiry.errors %}is-invalid{% endif %}" 
+                 id="id_license_expiry" 
+                 name="license_expiry" 
+                 value="{{ form.license_expiry.value|default:'' }}"
+                 required
+                 aria-describedby="license_expiry_help">
+          <small class="form-text text-muted" id="license_expiry_help">
+            <i class="fas fa-info-circle"></i>
+            License must be valid (not expired)
+          </small>
+          <div class="invalid-feedback">
+            {% if form.license_expiry.errors %}
+              <i class="fas fa-exclamation-circle"></i>
+              {{ form.license_expiry.errors.0 }}
+            {% else %}
+              License expiry date is required.
+            {% endif %}
           </div>
         </div>
 
         <div class="col-md-4">
           <label for="id_license_type" class="form-label required">
-            <i class="fas fa-car me-1"></i> License Type
+            <i class="fas fa-car"></i>
+            <span>License Type</span>
           </label>
           <input type="text" 
                  class="form-control" 
@@ -421,9 +566,11 @@
                  name="license_type" 
                  value="Professional Driver's License" 
                  readonly
-                 required>
-          <small class="form-text text-muted">
-            <i class="fas fa-info-circle me-1"></i> Only professional licenses accepted
+                 required
+                 aria-describedby="license_type_help">
+          <small class="form-text text-muted" id="license_type_help">
+            <i class="fas fa-lock"></i>
+            Only professional licenses are accepted
           </small>
         </div>
       </div>
@@ -433,229 +580,130 @@
     <!-- EMERGENCY CONTACT -->
     <div class="section-box">
       <div class="section-title">
-        <i class="fas fa-phone-alt me-2"></i> Emergency Contact
+        <i class="fas fa-phone-alt"></i>
+        <span>Emergency Contact Information</span>
       </div>
 
       <div class="row g-3">
         <div class="col-md-4">
           <label for="id_emergency_contact_name" class="form-label required">
-            <i class="fas fa-user-friends me-1"></i> Contact Name
+            <i class="fas fa-user-friends"></i>
+            <span>Contact Name</span>
           </label>
           <input type="text" class="form-control {% if form.emergency_contact_name.errors %}is-invalid{% endif %}" 
                  id="id_emergency_contact_name" name="emergency_contact_name" 
                  value="{{ form.emergency_contact_name.value|default:'' }}" 
-                 placeholder="Full name of emergency contact"
-                 required>
-          {% if form.emergency_contact_name.errors %}
-            <div class="invalid-feedback">
+                 placeholder="e.g., Maria Dela Cruz"
+                 required
+                 aria-describedby="emergency_name_help">
+          <small class="form-text text-muted" id="emergency_name_help">
+            <i class="fas fa-info-circle"></i>
+            Person to contact in case of emergency
+          </small>
+          <div class="invalid-feedback">
+            {% if form.emergency_contact_name.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.emergency_contact_name.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Emergency contact name is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-4">
           <label for="id_emergency_contact_number" class="form-label required">
-            <i class="fas fa-phone me-1"></i> Contact Number
+            <i class="fas fa-phone"></i>
+            <span>Contact Number</span>
           </label>
           <input type="tel" class="form-control {% if form.emergency_contact_number.errors %}is-invalid{% endif %}" 
                  id="id_emergency_contact_number" name="emergency_contact_number" 
                  value="{{ form.emergency_contact_number.value|default:'' }}" 
-                 placeholder="e.g., 09123456789 or +639123456789"
-                 required>
-          <small class="form-text text-muted">
-            <i class="fas fa-info-circle me-1"></i> Format: 09123456789 or +639123456789
+                 placeholder="e.g., 09171234567"
+                 required
+                 aria-describedby="emergency_number_help">
+          <small class="form-text text-muted" id="emergency_number_help">
+            <i class="fas fa-info-circle"></i>
+            Must be different from driver's number
           </small>
-          {% if form.emergency_contact_number.errors %}
-            <div class="invalid-feedback">
+          <div class="invalid-feedback">
+            {% if form.emergency_contact_number.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.emergency_contact_number.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Emergency contact number is required.
+            {% endif %}
+          </div>
         </div>
 
         <div class="col-md-4">
           <label for="id_emergency_contact_relationship" class="form-label required">
-            <i class="fas fa-heart me-1"></i> Relationship
+            <i class="fas fa-heart"></i>
+            <span>Relationship</span>
           </label>
           <input type="text" class="form-control {% if form.emergency_contact_relationship.errors %}is-invalid{% endif %}" 
                  id="id_emergency_contact_relationship" name="emergency_contact_relationship" 
                  value="{{ form.emergency_contact_relationship.value|default:'' }}" 
                  placeholder="e.g., Spouse, Parent, Sibling"
-                 required>
-          {% if form.emergency_contact_relationship.errors %}
-            <div class="invalid-feedback">
+                 required
+                 aria-describedby="emergency_relationship_help">
+          <div class="invalid-feedback">
+            {% if form.emergency_contact_relationship.errors %}
+              <i class="fas fa-exclamation-circle"></i>
               {{ form.emergency_contact_relationship.errors.0 }}
-            </div>
-          {% endif %}
+            {% else %}
+              Relationship is required.
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
 
 
     <!-- FOOTER BUTTONS -->
-    <div class="d-flex justify-content-end gap-2">
-      <a href="{% if user.role == 'admin' %}{% url 'accounts:admin_dashboard' %}{% else %}{% url 'accounts:staff_dashboard' %}{% endif %}" class="btn btn-outline-secondary px-4">
-        <i class="fas fa-times-circle me-1"></i> Cancel
+    <div class="d-flex justify-content-end gap-3 mt-4">
+      <a href="{% if user.role == 'admin' %}{% url 'accounts:admin_dashboard' %}{% else %}{% url 'accounts:staff_dashboard' %}{% endif %}" 
+         class="btn btn-outline-secondary px-5">
+        <i class="fas fa-times-circle"></i>
+        <span>Cancel</span>
       </a>
-      <button type="submit" class="btn btn-success px-4">
-        <i class="fas fa-check-circle me-1"></i> Register Driver
+      <button type="submit" class="btn btn-success px-5">
+        <i class="fas fa-check-circle"></i>
+        <span>Register Driver</span>
       </button>
     </div>
 
   </form>
 
 </div>
+
+<!-- Load Driver Validation Module -->
+<script src="{% static 'js/driver-validation.js' %}"></script>
+
 <script>
-  /* =====================================================
-   CUSTOM DATE PICKER (SAFE VERSION)
-===================================================== */
-function createCustomCalendar(inputFieldId, calendarBoxId, minYear, maxYear) {
-    const input = document.getElementById(inputFieldId);
-    const box = document.getElementById(calendarBoxId);
-
-    // 🔒 SAFETY GUARD (CRITICAL)
-    if (!input || !box) {
-        console.warn(
-            `Calendar skipped: ${!input ? inputFieldId : ""} ${!box ? calendarBoxId : ""}`
-        );
-        return;
-    }
-
-    input.type = "text";
-
-    const today = new Date();
-    let selected = null;
-    let month = today.getMonth();
-    let year = today.getFullYear();
-
-    function render() {
-        box.innerHTML = "";
-
-        /* HEADER */
-        const header = document.createElement("div");
-        header.className = "cal-header";
-
-        const monthSelect = document.createElement("select");
-        const months = [
-            "January","February","March","April","May","June",
-            "July","August","September","October","November","December"
-        ];
-
-        months.forEach((m, i) => {
-            const opt = document.createElement("option");
-            opt.value = i;
-            opt.textContent = m;
-            if (i === month) opt.selected = true;
-            monthSelect.appendChild(opt);
-        });
-
-        const yearSelect = document.createElement("select");
-        for (let y = minYear; y <= maxYear; y++) {
-            const opt = document.createElement("option");
-            opt.value = y;
-            opt.textContent = y;
-            if (y === year) opt.selected = true;
-            yearSelect.appendChild(opt);
-        }
-
-        monthSelect.onchange = () => {
-            month = parseInt(monthSelect.value);
-            render();
-        };
-
-        yearSelect.onchange = () => {
-            year = parseInt(yearSelect.value);
-            render();
-        };
-
-        header.appendChild(monthSelect);
-        header.appendChild(yearSelect);
-        box.appendChild(header);
-
-        /* DAYS HEADER */
-        const daysRow = document.createElement("div");
-        daysRow.className = "cal-days";
-        ["Su","Mo","Tu","We","Th","Fr","Sa"].forEach(d => {
-            const el = document.createElement("div");
-            el.textContent = d;
-            daysRow.appendChild(el);
-        });
-        box.appendChild(daysRow);
-
-        /* GRID */
-        const grid = document.createElement("div");
-        grid.className = "cal-grid";
-        box.appendChild(grid);
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const totalDays = new Date(year, month + 1, 0).getDate();
-
-        for (let i = 0; i < firstDay; i++) {
-            grid.appendChild(document.createElement("div"));
-        }
-
-        for (let d = 1; d <= totalDays; d++) {
-            const dayBtn = document.createElement("div");
-            dayBtn.className = "cal-day";
-            dayBtn.textContent = d;
-
-            const todayObj = new Date();
-            if (
-                year === todayObj.getFullYear() &&
-                month === todayObj.getMonth() &&
-                d === todayObj.getDate()
-            ) {
-                dayBtn.classList.add("today");
-            }
-
-            if (
-                selected &&
-                selected.year === year &&
-                selected.month === month &&
-                selected.day === d
-            ) {
-                dayBtn.classList.add("selected");
-            }
-
-            dayBtn.onclick = () => {
-                selected = { year, month, day: d };
-                input.value =
-                    `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-                box.style.display = "none";
-            };
-
-            grid.appendChild(dayBtn);
-        }
-    }
-
-    input.addEventListener("click", () => {
-        box.style.display = "block";
-        render();
-    });
-
-    document.addEventListener("click", (e) => {
-        if (!box.contains(e.target) && e.target !== input) {
-            box.style.display = "none";
-        }
-    });
-}
-
 /* =====================================================
-   INITIALIZE CALENDARS (AFTER DOM READY)
+   DATE INPUT MIN/MAX CONSTRAINTS
 ===================================================== */
 document.addEventListener("DOMContentLoaded", () => {
-    createCustomCalendar(
-        "id_birth_date",
-        "calendar_birth",
-        1950,
-        new Date().getFullYear()
-    );
+    // Birth Date: Must be 18-100 years old
+    const birthDateInput = document.getElementById("id_birth_date");
+    if (birthDateInput) {
+        const today = new Date();
+        const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate());
+        
+        birthDateInput.max = maxDate.toISOString().split('T')[0];
+        birthDateInput.min = minDate.toISOString().split('T')[0];
+    }
 
-    createCustomCalendar(
-        "id_license_expiry",
-        "calendar_expiry",
-        2024,
-        2045
-    );
+    // License Expiry: Must be future date (not expired)
+    const licenseExpiryInput = document.getElementById("id_license_expiry");
+    if (licenseExpiryInput) {
+        const today = new Date();
+        const maxDate = new Date(today.getFullYear() + 20, today.getMonth(), today.getDate());
+        
+        licenseExpiryInput.min = today.toISOString().split('T')[0];
+        licenseExpiryInput.max = maxDate.toISOString().split('T')[0];
+    }
 });
 
 

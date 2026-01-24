@@ -1,0 +1,431 @@
+/* =====================================================
+   DRIVER SEARCH DROPDOWN - CUSTOM SEARCHABLE SELECT
+   RDFS Color Palette
+===================================================== */
+
+:root {
+  --rdfs-blue: #112666;
+  --rdfs-blue-dark: #0c1c4a;
+  --rdfs-accent: #2563eb;
+  --rdfs-soft: #e8f4fd;
+  
+  --text: #0f172a;
+  --text-light: #475569;
+  --muted: #64748b;
+  
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #edf2f7;
+  --gray-300: #e2e8f0;
+  --gray-400: #cbd5e1;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .08);
+  --shadow-md: 0 8px 18px rgba(0, 0, 0, .12);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, .15);
+}
+
+/* =====================================================
+   WRAPPER
+===================================================== */
+.driver-search-wrapper {
+  position: relative;
+  width: 100%;
+  z-index: 100000 !important; /* Extremely high z-index for wrapper */
+}
+
+/* =====================================================
+   DISPLAY BUTTON
+===================================================== */
+.driver-search-display {
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 16px;
+  background: var(--gray-50);
+  border: 2px solid var(--gray-300);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.driver-search-display:hover {
+  background: #fff;
+  border-color: var(--gray-400);
+}
+
+.driver-search-display:focus,
+.driver-search-display.active {
+  outline: none;
+  background: #fff;
+  border-color: var(--rdfs-accent);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+/* Placeholder State */
+.driver-search-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.driver-search-placeholder i {
+  color: var(--rdfs-accent);
+  font-size: 1.1rem;
+}
+
+/* Selected State */
+.driver-search-selected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.driver-display-photo,
+.driver-display-photo-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--gray-300);
+  flex-shrink: 0;
+  background: var(--rdfs-soft);
+}
+
+.driver-display-photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.driver-display-photo-placeholder i {
+  color: var(--rdfs-accent);
+  font-size: 1rem;
+}
+
+/* Hide broken images */
+.driver-display-photo[alt]:after {
+  display: none;
+}
+
+.driver-display-photo {
+  /* Prevent alt text from showing */
+  color: transparent;
+  font-size: 0;
+}
+
+.driver-display-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.driver-display-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.driver-display-id {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Arrow Icon */
+.driver-search-arrow {
+  color: var(--muted);
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.driver-search-display.active .driver-search-arrow {
+  transform: rotate(180deg);
+}
+
+/* =====================================================
+   DROPDOWN PANEL
+===================================================== */
+.driver-search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 2px solid var(--rdfs-accent);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 999999 !important;
+  max-height: 200px; /* Compact - shows exactly 2 drivers */
+  display: flex;
+  flex-direction: column;
+  animation: dropdownSlideIn 0.2s ease-out;
+  pointer-events: auto;
+}
+
+/* When using fixed positioning (set by JS) */
+.driver-search-dropdown[style*="position: fixed"] {
+  position: fixed !important;
+  right: auto !important;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =====================================================
+   SEARCH INPUT
+===================================================== */
+.driver-search-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-bottom: 2px solid var(--gray-200);
+  border-radius: 12px 12px 0 0;
+  font-size: 0.95rem;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--gray-50);
+  transition: all 0.2s ease;
+}
+
+.driver-search-input:focus {
+  outline: none;
+  background: #fff;
+  border-bottom-color: var(--rdfs-accent);
+}
+
+.driver-search-input::placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* =====================================================
+   OPTIONS CONTAINER
+===================================================== */
+.driver-search-options {
+  overflow-y: auto;
+  max-height: 144px; /* Shows exactly 2 drivers (72px each) */
+  padding: 8px;
+}
+
+/* Custom scrollbar */
+.driver-search-options::-webkit-scrollbar {
+  width: 8px;
+}
+
+.driver-search-options::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: 4px;
+}
+
+.driver-search-options::-webkit-scrollbar-thumb {
+  background: var(--gray-400);
+  border-radius: 4px;
+}
+
+.driver-search-options::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* =====================================================
+   OPTION ITEM
+===================================================== */
+.driver-search-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.driver-search-option:hover,
+.driver-search-option.highlighted {
+  background: var(--rdfs-soft);
+  border-color: var(--rdfs-accent);
+  transform: translateX(4px);
+}
+
+.driver-option-photo,
+.driver-option-photo-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--gray-300);
+  flex-shrink: 0;
+  background: var(--gray-100);
+}
+
+.driver-option-photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.driver-option-photo-placeholder i {
+  color: var(--muted);
+  font-size: 1.5rem;
+}
+
+/* Hide broken images */
+.driver-option-photo[alt]:after {
+  display: none;
+}
+
+.driver-option-photo {
+  /* Prevent alt text from showing */
+  color: transparent;
+  font-size: 0;
+}
+
+.driver-option-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.driver-option-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.driver-option-id {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Highlight matching text */
+.driver-option-name mark,
+.driver-option-id mark {
+  background: #fef08a;
+  color: var(--rdfs-blue-dark);
+  font-weight: 700;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* =====================================================
+   EMPTY STATE
+===================================================== */
+.driver-search-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+
+.driver-search-empty i {
+  font-size: 3rem;
+  color: var(--gray-300);
+  margin-bottom: 12px;
+  display: block;
+}
+
+.driver-search-empty p {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+@media (max-width: 768px) {
+  .driver-search-display {
+    min-height: 48px;
+    padding: 8px 12px;
+  }
+  
+  .driver-search-dropdown {
+    max-height: 300px;
+  }
+  
+  .driver-search-options {
+    max-height: 240px;
+  }
+  
+  .driver-display-photo,
+  .driver-display-photo-placeholder {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .driver-option-photo,
+  .driver-option-photo-placeholder {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .driver-display-name,
+  .driver-option-name {
+    font-size: 0.9rem;
+  }
+  
+  .driver-display-id,
+  .driver-option-id {
+    font-size: 0.75rem;
+  }
+}
+
+/* =====================================================
+   ACCESSIBILITY
+===================================================== */
+.driver-search-display:focus-visible {
+  outline: 3px solid var(--rdfs-accent);
+  outline-offset: 2px;
+}
+
+.driver-search-option:focus-visible {
+  outline: 2px solid var(--rdfs-accent);
+  outline-offset: 2px;
+}
+
+/* =====================================================
+   LOADING STATE (Optional)
+===================================================== */
+.driver-search-loading {
+  text-align: center;
+  padding: 20px;
+  color: var(--muted);
+}
+
+.driver-search-loading i {
+  font-size: 2rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

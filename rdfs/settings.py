@@ -22,22 +22,17 @@ USE_REDIS_CHANNEL_LAYER = env.bool('USE_REDIS_CHANNEL_LAYER', default=False)
 # ======================================================
 # SECURITY
 # ======================================================
-SECRET_KEY = env('SECRET_KEY', default='replace-this-with-your-own-secret-key')
-DEBUG = env.bool('DEBUG', default=True)
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env.bool('DEBUG', default=False)
 
 # ======================================================
 # ALLOWED HOSTS
 # ======================================================
-ALLOWED_HOSTS = [
-    '*',
-    '127.0.0.1',
-    'localhost',
-]
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
 
-extra_hosts = env.list('ALLOWED_HOSTS', default=[])
-for host in extra_hosts:
-    if host not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(host)
+# Add wildcard for development only
+if DEBUG:
+    ALLOWED_HOSTS.append('*')
 
 # ======================================================
 # INSTALLED APPS
@@ -109,21 +104,9 @@ TEMPLATES = [
 # ======================================================
 # DATABASE
 # ======================================================
-if env('DATABASE_URL', default=None):
-    DATABASES = {
-        'default': env.db(),
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'rdfs_db',
-            'USER': 'postgres',
-            'PASSWORD': 'admin',
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+DATABASES = {
+    'default': env.db('DATABASE_URL', default='postgresql://postgres:admin@localhost:5432/rdfs_db')
+}
 
 # ======================================================
 # AUTH / USERS
@@ -155,11 +138,31 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 # ======================================================
 # MEDIA FILE STORAGE (Cloudinary)
 # ======================================================
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
-    'API_KEY': env('CLOUDINARY_API_KEY', default=''),
-    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
-}
+# Parse CLOUDINARY_URL if provided (format: cloudinary://api_key:api_secret@cloud_name)
+CLOUDINARY_URL = env('CLOUDINARY_URL', default='')
+
+if CLOUDINARY_URL:
+    # Parse the URL to extract components
+    import re
+    match = re.match(r'cloudinary://(\d+):([^@]+)@(.+)', CLOUDINARY_URL)
+    if match:
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': match.group(3),
+            'API_KEY': match.group(1),
+            'API_SECRET': match.group(2),
+        }
+    else:
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+            'API_KEY': env('CLOUDINARY_API_KEY', default=''),
+            'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+        }
+else:
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+        'API_KEY': env('CLOUDINARY_API_KEY', default=''),
+        'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+    }
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
@@ -174,11 +177,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ASGI_APPLICATION = 'rdfs.asgi.application'
 
 if USE_REDIS_CHANNEL_LAYER:
+    REDIS_URL = env('REDIS_URL', default='redis://127.0.0.1:6379')
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("127.0.0.1", 6379)],
+                "hosts": [REDIS_URL],
             },
         },
     }
@@ -193,11 +197,11 @@ else:
 # SESSION / SECURITY
 # ======================================================
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE = 900
+SESSION_COOKIE_AGE = env.int('SESSION_COOKIE_AGE', default=900)  # 15 minutes default
 SESSION_SAVE_EVERY_REQUEST = True
 
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=IS_PRODUCTION)
+SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=IS_PRODUCTION)
 
 # ======================================================
 # PRODUCTION SECURITY
@@ -205,10 +209,15 @@ SESSION_COOKIE_SECURE = False
 if IS_PRODUCTION:
     DEBUG = False
 
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True)
+    SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=True)
+    
+    # Additional security headers
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'

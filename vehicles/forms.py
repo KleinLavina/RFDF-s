@@ -86,6 +86,49 @@ class VehicleRegistrationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+        # Import validation rules from single source of truth
+        from .vehicle_validation_rules import get_vehicle_field_rules
+        
+        # Apply validation rules from single source
+        for field_name, field in self.fields.items():
+            rules = get_vehicle_field_rules(field_name)
+            if not rules:
+                continue
+            
+            # Set required flag
+            field.required = rules.get('required', False)
+            
+            # Set widget attributes
+            attrs = field.widget.attrs
+            
+            # Add placeholder
+            if rules.get('placeholder'):
+                attrs['placeholder'] = rules['placeholder']
+            
+            # Add pattern for HTML5 validation
+            if rules.get('pattern'):
+                attrs['pattern'] = rules['pattern']
+            
+            # Add min/max length
+            if rules.get('min_length'):
+                attrs['minlength'] = rules['min_length']
+            
+            if rules.get('max_length'):
+                attrs['maxlength'] = rules['max_length']
+                if hasattr(field, 'max_length'):
+                    field.max_length = rules['max_length']
+            
+            # Add min/max value for number fields
+            if rules.get('min_value') is not None:
+                attrs['min'] = rules['min_value']
+            
+            if rules.get('max_value') is not None:
+                attrs['max'] = rules['max_value']
+            
+            # Set error messages
+            if rules.get('error_messages'):
+                field.error_messages.update(rules['error_messages'])
+        
         # Set required fields
         required_fields = [
             'vehicle_type', 'ownership_type', 'assigned_driver', 
@@ -450,6 +493,42 @@ class DriverRegistrationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Import validation rules
+        from .validation_rules import get_field_rules
+        
+        # Apply validation rules from single source of truth
+        for field_name, field in self.fields.items():
+            rules = get_field_rules(field_name)
+            if not rules:
+                continue
+            
+            # Set required flag
+            field.required = rules.get('required', False)
+            
+            # Set widget attributes
+            attrs = field.widget.attrs
+            
+            # Add placeholder
+            if rules.get('placeholder'):
+                attrs['placeholder'] = rules['placeholder']
+            
+            # Add pattern for HTML5 validation
+            if rules.get('pattern'):
+                attrs['pattern'] = rules['pattern']
+            
+            # Add min/max length
+            if rules.get('min_length'):
+                attrs['minlength'] = rules['min_length']
+            
+            if rules.get('max_length'):
+                attrs['maxlength'] = rules['max_length']
+                if hasattr(field, 'max_length'):
+                    field.max_length = rules['max_length']
+            
+            # Set error messages
+            if rules.get('error_messages'):
+                field.error_messages.update(rules['error_messages'])
 
         # Blood type (explicit choice field)
         self.fields['blood_type'] = forms.ChoiceField(
