@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ driver.first_name }} {{ driver.last_name }} | Driver Profile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/vehicles/driver-detail.css' %}?v=1.0">
+{% endblock %}
+
+{% block content %}
+<div class="driver-detail-container">
+  
+  <!-- HEADER -->
+  <div class="detail-header">
+    <a href="{% url 'vehicles:registered_drivers' %}" class="btn-back">
+      <i class="bi bi-arrow-left-circle"></i>
+      Back to Drivers
+    </a>
+    <div class="header-actions">
+      <button type="button" class="btn-action btn-edit" id="btnToggleEdit">
+        <i class="bi bi-pencil-square"></i>
+        <span id="editButtonText">Edit Driver</span>
+      </button>
+      {% if user.is_superuser or user.role == 'admin' %}
+      <button type="button" class="btn-action btn-delete" id="btnDeleteDriver">
+        <i class="bi bi-trash"></i>
+        Delete
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- DRIVER PROFILE CARD -->
+  <div class="profile-card">
+    <div class="profile-photo-section">
+      {% if driver.driver_photo %}
+        <img src="{{ driver.driver_photo.url }}" alt="{{ driver.first_name }}" class="profile-photo">
+      {% else %}
+        <div class="profile-photo-placeholder">
+          <i class="bi bi-person-circle"></i>
+        </div>
+      {% endif %}
+    </div>
+    
+    <div class="profile-info-section">
+      <h1 class="driver-name">
+        {{ driver.first_name }} 
+        {% if driver.middle_name %}{{ driver.middle_name }}{% endif %} 
+        {{ driver.last_name }}
+        {% if driver.suffix %} {{ driver.suffix }}{% endif %}
+      </h1>
+      <div class="driver-id-badge">
+        <i class="bi bi-person-badge"></i>
+        {{ driver.driver_id }}
+      </div>
+      <div class="profile-meta">
+        <div class="meta-item">
+          <i class="bi bi-telephone"></i>
+          <span>{{ driver.mobile_number|default:"N/A" }}</span>
+        </div>
+        <div class="meta-item">
+          <i class="bi bi-envelope"></i>
+          <span>{{ driver.email|default:"N/A" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT GRID -->
+  <div class="content-grid">
+    
+    <!-- EDIT FORM (Hidden by default) -->
+    <form id="driverEditForm" class="edit-form-container" style="display: none;" method="POST" action="{% url 'vehicles:edit_driver' driver.id %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      <div class="form-section">
+        <h3 class="form-section-title">
+          <i class="bi bi-person-fill"></i>
+          Personal Information
+        </h3>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="id_first_name">First Name *</label>
+            <input type="text" name="first_name" id="id_first_name" value="{{ driver.first_name }}" required>
+          </div>
+          <div class="form-field">
+            <label for="id_middle_name">Middle Name</label>
+            <input type="text" name="middle_name" id="id_middle_name" value="{{ driver.middle_name|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_last_name">Last Name *</label>
+            <input type="text" name="last_name" id="id_last_name" value="{{ driver.last_name }}" required>
+          </div>
+          <div class="form-field">
+            <label for="id_suffix">Suffix</label>
+            <input type="text" name="suffix" id="id_suffix" value="{{ driver.suffix|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_birth_date">Birth Date</label>
+            <input type="date" name="birth_date" id="id_birth_date" value="{{ driver.birth_date|date:'Y-m-d' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_birth_place">Birth Place</label>
+            <input type="text" name="birth_place" id="id_birth_place" value="{{ driver.birth_place|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_blood_type">Blood Type</label>
+            <input type="text" name="blood_type" id="id_blood_type" value="{{ driver.blood_type|default:'' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="form-section-title">
+          <i class="bi bi-telephone-fill"></i>
+          Contact Information
+        </h3>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="id_mobile_number">Mobile Number</label>
+            <input type="text" name="mobile_number" id="id_mobile_number" value="{{ driver.mobile_number|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_email">Email</label>
+            <input type="email" name="email" id="id_email" value="{{ driver.email|default:'' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="form-section-title">
+          <i class="bi bi-geo-alt-fill"></i>
+          Address Information
+        </h3>
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="id_street">Street</label>
+            <input type="text" name="street" id="id_street" value="{{ driver.street|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_barangay">Barangay</label>
+            <input type="text" name="barangay" id="id_barangay" value="{{ driver.barangay|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_city_municipality">City/Municipality</label>
+            <input type="text" name="city_municipality" id="id_city_municipality" value="{{ driver.city_municipality|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_province">Province</label>
+            <input type="text" name="province" id="id_province" value="{{ driver.province|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_zip_code">ZIP Code</label>
+            <input type="text" name="zip_code" id="id_zip_code" value="{{ driver.zip_code|default:'' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="form-section-title">
+          <i class="bi bi-card-checklist"></i>
+          License Information
+        </h3>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="id_license_number">License Number</label>
+            <input type="text" name="license_number" id="id_license_number" value="{{ driver.license_number|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_license_expiry">License Expiry</label>
+            <input type="date" name="license_expiry" id="id_license_expiry" value="{{ driver.license_expiry|date:'Y-m-d' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="form-section-title">
+          <i class="bi bi-shield-fill-exclamation"></i>
+          Emergency Contact
+        </h3>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="id_emergency_contact_name">Contact Name</label>
+            <input type="text" name="emergency_contact_name" id="id_emergency_contact_name" value="{{ driver.emergency_contact_name|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_emergency_contact_number">Contact Number</label>
+            <input type="text" name="emergency_contact_number" id="id_emergency_contact_number" value="{{ driver.emergency_contact_number|default:'' }}">
+          </div>
+          <div class="form-field">
+            <label for="id_emergency_contact_relationship">Relationship</label>
+            <input type="text" name="emergency_contact_relationship" id="id_emergency_contact_relationship" value="{{ driver.emergency_contact_relationship|default:'' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="form-section-title">
+          <i class="bi bi-camera-fill"></i>
+          Driver Photo
+        </h3>
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="id_driver_photo">Upload New Photo (optional)</label>
+            <input type="file" name="driver_photo" id="id_driver_photo" accept="image/*">
+            <small class="form-help">Leave empty to keep current photo</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" id="btnCancelEdit">
+          <i class="bi bi-x-circle"></i>
+          Cancel
+        </button>
+        <button type="submit" class="btn-save">
+          <i class="bi bi-check-circle"></i>
+          Save Changes
+        </button>
+      </div>
+    </form>
+
+    <!-- VIEW MODE (Default) -->
+    <div id="driverViewMode" class="view-mode-container">
+    
+    <!-- PERSONAL INFORMATION -->
+    <div class="info-section">
+      <div class="section-header">
+        <i class="bi bi-person-fill"></i>
+        <h2>Personal Information</h2>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Birth Date</span>
+          <span class="info-value">{{ driver.birth_date|date:"F d, Y"|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Birth Place</span>
+          <span class="info-value">{{ driver.birth_place|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Blood Type</span>
+          <span class="info-value">{{ driver.blood_type|default:"N/A" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LICENSE INFORMATION -->
+    <div class="info-section">
+      <div class="section-header">
+        <i class="bi bi-card-checklist"></i>
+        <h2>License Information</h2>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">License Number</span>
+          <span class="info-value license-number">{{ driver.license_number|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">License Type</span>
+          <span class="info-value">Professional</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Expiry Date</span>
+          {% if driver.license_expiry %}
+            <span class="info-value expiry-badge {% if driver.license_expiry < today %}expired{% endif %}">
+              {{ driver.license_expiry|date:"F d, Y" }}
+            </span>
+          {% else %}
+            <span class="info-value">N/A</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ADDRESS INFORMATION -->
+    <div class="info-section full-width">
+      <div class="section-header">
+        <i class="bi bi-geo-alt-fill"></i>
+        <h2>Address Information</h2>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Street</span>
+          <span class="info-value">{{ driver.street|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Barangay</span>
+          <span class="info-value">{{ driver.barangay|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">City/Municipality</span>
+          <span class="info-value">{{ driver.city_municipality|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Province</span>
+          <span class="info-value">{{ driver.province|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">ZIP Code</span>
+          <span class="info-value">{{ driver.zip_code|default:"N/A" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMERGENCY CONTACT -->
+    <div class="info-section full-width">
+      <div class="section-header">
+        <i class="bi bi-shield-fill-exclamation"></i>
+        <h2>Emergency Contact</h2>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Contact Name</span>
+          <span class="info-value">{{ driver.emergency_contact_name|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Contact Number</span>
+          <span class="info-value">{{ driver.emergency_contact_number|default:"N/A" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Relationship</span>
+          <span class="info-value">{{ driver.emergency_contact_relationship|default:"N/A" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ASSIGNED VEHICLES -->
+    <div class="info-section full-width">
+      <div class="section-header">
+        <i class="bi bi-truck"></i>
+        <h2>Assigned Vehicles ({{ total_vehicles }})</h2>
+      </div>
+      {% if vehicles %}
+        <div class="vehicles-list">
+          {% for vehicle in vehicles %}
+          <div class="vehicle-card">
+            <div class="vehicle-qr">
+              {% if vehicle.qr_code_url %}
+                <img src="{{ vehicle.qr_code_url }}" alt="QR">
+              {% else %}
+                <div class="qr-placeholder">
+                  <i class="bi bi-qr-code"></i>
+                </div>
+              {% endif %}
+            </div>
+            <div class="vehicle-info">
+              <div class="vehicle-name">{{ vehicle.vehicle_name }}</div>
+              <div class="vehicle-meta">
+                <span class="vehicle-type">
+                  <i class="bi bi-car-front"></i>
+                  {{ vehicle.get_vehicle_type_display }}
+                </span>
+                <span class="vehicle-plate">{{ vehicle.license_plate }}</span>
+              </div>
+              {% if vehicle.route %}
+              <div class="vehicle-route">
+                <i class="bi bi-signpost-2"></i>
+                {{ vehicle.route }}
+              </div>
+              {% endif %}
+            </div>
+            <div class="vehicle-actions">
+              <a href="{% url 'vehicles:vehicle_detail' vehicle.id %}" class="btn-view-vehicle">
+                <i class="bi bi-eye"></i>
+                View
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-vehicles">
+          <i class="bi bi-truck"></i>
+          <p>No vehicles assigned to this driver</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+  <!-- End View Mode -->
+
+  </div>
+  <!-- End Content Grid -->
+
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div id="deleteModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <h3>Confirm Deletion</h3>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to delete <strong>{{ driver.first_name }} {{ driver.last_name }}</strong>?</p>
+      <p class="warning-text">This action cannot be undone. All associated data will be permanently removed.</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" id="btnCancelDelete">Cancel</button>
+      <button type="button" class="btn-confirm-delete" id="btnConfirmDelete">
+        <i class="bi bi-trash"></i>
+        Delete Driver
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const deleteModal = document.getElementById('deleteModal');
+  const btnDelete = document.getElementById('btnDeleteDriver');
+  const btnToggleEdit = document.getElementById('btnToggleEdit');
+  const btnCancelEdit = document.getElementById('btnCancelEdit');
+  const btnCancelDelete = document.getElementById('btnCancelDelete');
+  const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+  const editForm = document.getElementById('driverEditForm');
+  const viewMode = document.getElementById('driverViewMode');
+  const editButtonText = document.getElementById('editButtonText');
+
+  let isEditMode = false;
+
+  // Toggle edit mode
+  if (btnToggleEdit) {
+    btnToggleEdit.addEventListener('click', function() {
+      isEditMode = !isEditMode;
+      
+      if (isEditMode) {
+        // Switch to edit mode
+        viewMode.style.display = 'none';
+        editForm.style.display = 'block';
+        editButtonText.textContent = 'Cancel Edit';
+        btnToggleEdit.classList.remove('btn-edit');
+        btnToggleEdit.classList.add('btn-cancel');
+      } else {
+        // Switch to view mode
+        viewMode.style.display = 'grid';
+        editForm.style.display = 'none';
+        editButtonText.textContent = 'Edit Driver';
+        btnToggleEdit.classList.remove('btn-cancel');
+        btnToggleEdit.classList.add('btn-edit');
+      }
+    });
+  }
+
+  // Cancel edit
+  if (btnCancelEdit) {
+    btnCancelEdit.addEventListener('click', function() {
+      viewMode.style.display = 'grid';
+      editForm.style.display = 'none';
+      editButtonText.textContent = 'Edit Driver';
+      btnToggleEdit.classList.remove('btn-cancel');
+      btnToggleEdit.classList.add('btn-edit');
+      isEditMode = false;
+    });
+  }
+
+  // Handle form submission
+  if (editForm) {
+    editForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const submitBtn = editForm.querySelector('[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
+      const formData = new FormData(editForm);
+
+      fetch(editForm.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Reload page to show updated data
+          window.location.reload();
+        } else {
+          alert(data.message || 'Failed to update driver');
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      })
+      .catch(err => {
+        console.error('Submit error:', err);
+        alert('Error updating driver');
+        if (submitBtn) submitBtn.disabled = false;
+      });
+    });
+  }
+
+  // Open delete modal
+  if (btnDelete) {
+    btnDelete.addEventListener('click', function() {
+      deleteModal.style.display = 'flex';
+    });
+  }
+
+  // Cancel delete
+  if (btnCancelDelete) {
+    btnCancelDelete.addEventListener('click', function() {
+      deleteModal.style.display = 'none';
+    });
+  }
+
+  // Confirm delete
+  if (btnConfirmDelete) {
+    btnConfirmDelete.addEventListener('click', function() {
+      btnConfirmDelete.disabled = true;
+      
+      fetch("{% url 'vehicles:delete_driver' driver.id %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = "{% url 'vehicles:registered_drivers' %}";
+        } else {
+          alert(data.message || 'Failed to delete driver');
+          btnConfirmDelete.disabled = false;
+        }
+      })
+      .catch(err => {
+        console.error('Delete error:', err);
+        alert('Error deleting driver');
+        btnConfirmDelete.disabled = false;
+      });
+    });
+  }
+
+  // Close modal on backdrop click
+  if (deleteModal) {
+    deleteModal.addEventListener('click', function(e) {
+      if (e.target === deleteModal) {
+        deleteModal.style.display = 'none';
+      }
+    });
+  }
+});
+</script>
+
+{% endblock %}

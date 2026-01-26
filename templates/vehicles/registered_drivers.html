@@ -3,461 +3,165 @@
 
 {% block title %}Registered Drivers | RDFS{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/vehicles/driver-list.css' %}?v=2.0">
+{% endblock %}
+
 {% block content %}
-
-<link rel="stylesheet" href="{% static 'styles/vehicles/edit_forms.css' %}">
-<link rel="stylesheet" href="{% static 'styles/vehicles/04.css' %}">
-<div class="rdfs-drivers-scope p-4">
-
+<div class="driver-list-container">
+  
   <!-- HEADER -->
-  <div class="rdfs-drivers-header">
+  <div class="page-header">
     <div>
-      <h3 class="rdfs-drivers-title mb-1">
-        <i class="fas fa-users me-2"></i>
+      <h1 class="page-title">
+        <i class="bi bi-people-fill"></i>
         Registered Drivers
-      </h3>
-      <p class="rdfs-drivers-subtitle mb-0">
-        View, search, and manage registered drivers in the system.
+      </h1>
+      <p class="page-subtitle">
+        View and manage all registered drivers in the system
       </p>
     </div>
-
-    <a href="{% if user.role == 'admin' %}{% url 'accounts:admin_dashboard' %}{% else %}{% url 'accounts:staff_dashboard' %}{% endif %}" class="rdfs-drivers-back">
-      <i class="fas fa-arrow-left-circle me-1"></i>
-      Return to Dashboard
+    <a href="{% if user.role == 'admin' %}{% url 'accounts:admin_dashboard' %}{% else %}{% url 'accounts:staff_dashboard' %}{% endif %}" class="btn-back">
+      <i class="bi bi-arrow-left-circle"></i>
+      Dashboard
     </a>
   </div>
 
-
-  <!-- SEARCH -->
-  <div class="rdfs-drivers-search-wrap">
-    <form method="get" class="rdfs-drivers-search" role="search">
-      <i class="fas fa-search rdfs-drivers-search-icon"></i>
+  <!-- SEARCH & FILTER BAR -->
+  <div class="search-container">
+    <div class="search-wrapper">
+      <i class="bi bi-search search-icon"></i>
       <input
         type="text"
-        name="q"
-        placeholder="Search by name, license, or contact…"
+        id="driverSearch"
+        class="search-input"
+        placeholder="Search by name, license number, or contact..."
         value="{{ request.GET.q }}"
+        autocomplete="off"
       />
-      <button type="submit">Search</button>
-    </form>
+      <button type="button" id="clearSearch" class="btn-clear-search" style="display: none;">
+        <i class="bi bi-x-circle-fill"></i>
+      </button>
+    </div>
+    <div class="filter-controls">
+      <div class="filter-group">
+        <label for="sortBy">
+          <i class="bi bi-sort-down"></i>
+          Sort By:
+        </label>
+        <select id="sortBy" class="filter-select">
+          <option value="name-asc">Name (A → Z)</option>
+          <option value="name-desc">Name (Z → A)</option>
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="expiry-near">Near Expiry</option>
+          <option value="expiry-expired">Already Expired</option>
+          <option value="expiry-longest">Longest Time Remaining</option>
+          <option value="expiry-shortest">Shortest Time Remaining</option>
+        </select>
+      </div>
+    </div>
+    <div class="search-hint">
+      <i class="bi bi-info-circle"></i>
+      Search and filters apply automatically
+    </div>
   </div>
-
-
 
   <!-- RESULTS COUNTER -->
-  {% if page_obj %}
-  <div class="rdfs-results-counter">
-    Showing <strong>{{ page_obj.start_index }} - {{ page_obj.end_index }}</strong> 
-    of <strong>{{ page_obj.paginator.count }}</strong> driver{{ page_obj.paginator.count|pluralize }}
-    {% if request.GET.q %} matching "{{ request.GET.q }}"{% endif %}
+  <div class="results-counter" id="resultsCounter">
+    <span id="resultsText">
+      Showing <strong>{{ drivers.count }}</strong> driver{{ drivers.count|pluralize }}
+    </span>
   </div>
-  {% endif %}
 
-  <!-- DRIVERS GRID -->
-  {% if page_obj %}
-    <div class="rdfs-drivers-grid">
-      {% for driver in page_obj %}
-      <div class="driver-card-compact">
-        
-        <!-- CARD HEADER - DRIVER NAME -->
-        <div class="driver-card-header">
-          <h4 class="driver-name-title">
-            <i class="fas fa-user-circle"></i>
-            {{ driver.first_name }} 
-            {% if driver.middle_name %}{{ driver.middle_name|slice:":1" }}.{% endif %} 
-            {{ driver.last_name }}
-            {% if driver.suffix %} {{ driver.suffix }}{% endif %}
-          </h4>
-        </div>
-
-        <!-- CARD BODY - TWO COLUMN LAYOUT -->
-        <div class="driver-card-body">
-          
-          <!-- LEFT SIDE: PHOTO & ID -->
-          <div class="driver-left-side">
+  <!-- DRIVERS TABLE -->
+  <div class="table-container">
+    <table class="drivers-table" id="driversTable">
+      <thead>
+        <tr>
+          <th class="col-photo">Photo</th>
+          <th class="col-name">Full Name</th>
+          <th class="col-license">License Number</th>
+          <th class="col-expiry">License Expiry</th>
+          <th class="col-contact">Contact</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="driversTableBody">
+        {% for driver in drivers %}
+        <tr class="driver-row {% if driver.expiry_info.needs_alert %}expiry-alert-row{% endif %}" data-driver-id="{{ driver.id }}">
+          <td class="col-photo">
             {% if driver.driver_photo %}
-              <img src="{{ driver.driver_photo.url }}" alt="{{ driver.first_name }}" class="driver-photo-compact">
+              <img src="{{ driver.driver_photo.url }}" alt="{{ driver.first_name }}" class="driver-photo">
             {% else %}
-              <div class="driver-photo-compact">
-                <i class="fas fa-user"></i>
+              <div class="driver-photo-placeholder">
+                <i class="bi bi-person-circle"></i>
               </div>
             {% endif %}
-            <div class="driver-id-compact">{{ driver.driver_id }}</div>
-          </div>
-
-          <!-- RIGHT SIDE: DETAILS GRID -->
-          <div class="driver-right-side">
-            <div class="driver-details-grid">
-              <div class="driver-detail-item">
-                <span class="driver-detail-label">License No.</span>
-                <span class="driver-detail-value">{{ driver.license_number }}</span>
-              </div>
-              
-              <div class="driver-detail-item">
-                <span class="driver-detail-label">Expiry Date</span>
-                <span class="driver-detail-value">{{ driver.license_expiry|date:"M d, Y"|default:"N/A" }}</span>
-              </div>
-              
-              <div class="driver-detail-item">
-                <span class="driver-detail-label">Contact</span>
-                <span class="driver-detail-value">{{ driver.mobile_number }}</span>
-              </div>
-              
-              <div class="driver-detail-item">
-                <span class="driver-detail-label">Email</span>
-                <span class="driver-detail-value small">{{ driver.email|truncatechars:25 }}</span>
-              </div>
-              
-              <div class="driver-detail-item">
-                <span class="driver-detail-label">Blood Type</span>
-                <span class="blood-badge-compact">{{ driver.blood_type|default:"N/A" }}</span>
-              </div>
-              
-              <div class="driver-detail-item">
-                <span class="driver-detail-label">License Type</span>
-                <span class="license-badge-compact">{{ driver.get_license_type_display|default:"Professional Driver's License" }}</span>
-              </div>
+          </td>
+          <td class="col-name">
+            <div class="driver-name">
+              {{ driver.first_name }} 
+              {% if driver.middle_name %}{{ driver.middle_name|slice:":1" }}.{% endif %} 
+              {{ driver.last_name }}
+              {% if driver.suffix %} {{ driver.suffix }}{% endif %}
             </div>
-          </div>
-
-        </div>
-
-        <!-- FOOTER ACTIONS -->
-        <div class="driver-card-footer-compact">
-          <button type="button"
-                  class="btn btn-sm btn-outline-primary btn-edit-driver me-2"
-                  data-edit-url="{% url 'vehicles:driver_edit_form' driver.id %}">
-            <i class="fas fa-pen me-1"></i> Edit
-          </button>
-          {% if user.is_superuser or user.role == 'admin' %}
-          <button class="btn-delete-driver btn-delete-item"
-        data-url="{% url 'vehicles:delete_driver' driver.id %}"
-        data-type="Driver"
-        data-name="{{ driver.first_name }} {{ driver.last_name }}">
-  <i class="fas fa-trash"></i> Delete
-</button>
-          {% endif %}
-
-        </div>
-
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- PAGINATION -->
-    {% if page_obj.has_other_pages %}
-    <div class="rdfs-pagination-container">
-      <ul class="rdfs-pagination">
-        {% if page_obj.has_previous %}
-          <li class="rdfs-pagination-item">
-            <a class="rdfs-pagination-link rdfs-pagination-arrow" 
-               href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-              <i class="fas fa-chevron-left"></i> Previous
+          </td>
+          <td class="col-license">
+            <span class="license-badge">{{ driver.license_number }}</span>
+          </td>
+          <td class="col-expiry">
+            {% if driver.expiry_info.expiry_date %}
+              <div class="expiry-info">
+                <span class="expiry-date expiry-{{ driver.expiry_info.status }}">
+                  {{ driver.expiry_info.expiry_date|date:"M d, Y" }}
+                </span>
+                {% if driver.expiry_info.needs_alert %}
+                  <span class="expiry-alert-badge">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    {{ driver.expiry_info.message }}
+                  </span>
+                {% endif %}
+              </div>
+            {% else %}
+              <span class="text-muted">N/A</span>
+            {% endif %}
+          </td>
+          <td class="col-contact">
+            <div class="contact-info">
+              <div><i class="bi bi-telephone"></i> {{ driver.mobile_number }}</div>
+              <div class="text-muted small"><i class="bi bi-envelope"></i> {{ driver.email|truncatechars:25 }}</div>
+            </div>
+          </td>
+          <td class="col-actions">
+            <a href="{% url 'vehicles:driver_detail' driver.id %}" class="btn-action btn-view">
+              <i class="bi bi-eye"></i>
+              View Details
             </a>
-          </li>
-        {% else %}
-          <li class="rdfs-pagination-item">
-            <span class="rdfs-pagination-link rdfs-pagination-arrow disabled">
-              <i class="fas fa-chevron-left"></i> Previous
-            </span>
-          </li>
-        {% endif %}
-
-        {% for num in page_obj.paginator.page_range %}
-          {% if num == page_obj.number %}
-            <li class="rdfs-pagination-item">
-              <span class="rdfs-pagination-link active">{{ num }}</span>
-            </li>
-          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-            <li class="rdfs-pagination-item">
-              <a class="rdfs-pagination-link" 
-                 href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                {{ num }}
-              </a>
-            </li>
-          {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr class="empty-row">
+          <td colspan="6" class="text-center py-5">
+            <div class="empty-state">
+              <i class="bi bi-person-x"></i>
+              <p>No drivers found</p>
+              <small class="text-muted">Try adjusting your search</small>
+            </div>
+          </td>
+        </tr>
         {% endfor %}
-
-        {% if page_obj.has_next %}
-          <li class="rdfs-pagination-item">
-            <a class="rdfs-pagination-link rdfs-pagination-arrow" 
-               href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-              Next <i class="fas fa-chevron-right"></i>
-            </a>
-          </li>
-        {% else %}
-          <li class="rdfs-pagination-item">
-            <span class="rdfs-pagination-link rdfs-pagination-arrow disabled">
-              Next <i class="fas fa-chevron-right"></i>
-            </span>
-          </li>
-        {% endif %}
-      </ul>
-      
-      <div class="rdfs-pagination-info">
-        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-      </div>
-    </div>
-    {% endif %}
-
-  {% else %}
-    <div class="empty-state">
-      <i class="fas fa-user-times"></i>
-      <p class="mb-0">No drivers registered yet.</p>
-      {% if request.GET.q %}
-        <p class="mt-2">Try a different search term.</p>
-      {% endif %}
-    </div>
-  {% endif %}
-
-</div>
-
-<!-- DELETE CONFIRMATION MODAL -->
-<div id="deleteModal" class="rdfs-modal-overlay hidden">
-  <div class="rdfs-modal">
-
-    <div class="rdfs-modal-header">
-      <i class="fas fa-exclamation-triangle text-danger"></i>
-      <h5>Confirm Deletion</h5>
-    </div>
-
-    <div class="rdfs-modal-body">
-      <p id="deleteModalText"></p>
-      <p class="rdfs-modal-warning">
-        This action cannot be undone.
-      </p>
-    </div>
-
-    <div class="rdfs-modal-footer">
-      <button type="button" class="btn-cancel" id="cancelDelete">
-        Cancel
-      </button>
-      <button type="button" class="btn-confirm-delete" id="confirmDelete">
-        <i class="fas fa-trash"></i> Delete
-      </button>
-    </div>
-
+      </tbody>
+    </table>
   </div>
-</div>
-<style>
-.rdfs-modal-overlay .rdfs-modal {
-  max-width: 960px;
-  width: min(95vw, 960px);
-}
 
-.rdfs-modal-overlay.hidden {
-  display: none;
-}
-
-.rdfs-modal-overlay.active {
-  display: flex;
-}
-
-body.rdfs-modal-open {
-  overflow: hidden;
-}
-
-#driverEditModal .rdfs-modal-body {
-  max-height: 78vh;
-  overflow-y: auto;
-  padding-right: 1rem;
-}
-</style>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-
-  const modal = document.getElementById("deleteModal");
-  const modalText = document.getElementById("deleteModalText");
-  const confirmBtn = document.getElementById("confirmDelete");
-  const cancelBtn = document.getElementById("cancelDelete");
-
-  let deleteUrl = null;
-
-  /* ============================
-     OPEN MODAL
-  ============================ */
-  document.querySelectorAll(".btn-delete-item").forEach(btn => {
-    btn.addEventListener("click", () => {
-      deleteUrl = btn.dataset.url;
-      const name = btn.dataset.name || "this item";
-
-      modalText.innerHTML = `
-        Are you sure you want to delete <strong>${name}</strong>?
-      `;
-
-      modal.classList.remove("hidden");
-    });
-  });
-
-  /* ============================
-     CANCEL DELETE
-  ============================ */
-  cancelBtn.addEventListener("click", () => {
-    modal.classList.add("hidden");
-    deleteUrl = null;
-  });
-
-  /* ============================
-     CONFIRM DELETE
-  ============================ */
-  confirmBtn.addEventListener("click", () => {
-    if (!deleteUrl) return;
-
-    confirmBtn.disabled = true;
-
-    fetch(deleteUrl, {
-      method: "POST",
-      headers: {
-        "X-CSRFToken": "{{ csrf_token }}"
-      }
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        modal.classList.add("hidden");
-
-        /* ✅ REFRESH PAGE AFTER SUCCESS */
-        setTimeout(() => {
-          window.location.reload();
-        }, 500); // delay lets toast appear
-      } else {
-        alert(data.message || "❌ Delete failed.");
-      }
-    })
-    .catch(err => {
-      console.error("Delete error:", err);
-      alert("❌ Error deleting item.");
-    })
-    .finally(() => {
-      confirmBtn.disabled = false;
-    });
-  });
-
-  /* ============================
-     CLOSE MODAL ON BACKDROP
-  ============================ */
-  modal.addEventListener("click", e => {
-    if (e.target === modal) {
-      modal.classList.add("hidden");
-    }
-  });
-
-});
-document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll(".rdfs-toast").forEach(toast => {
-
-    // Auto-hide after 5 seconds
-    const timer = setTimeout(() => {
-      toast.classList.add("hide");
-      setTimeout(() => toast.remove(), 350);
-    }, 5000);
-
-    // Manual close
-    toast.querySelector(".rdfs-toast-close")?.addEventListener("click", () => {
-      clearTimeout(timer);
-      toast.remove();
-    });
-
-  });
-});
-</script>
-
-<div id="driverEditModal" class="rdfs-modal-overlay hidden">
-  <div class="rdfs-modal rdfs-modal-lg" role="dialog" aria-modal="true">
-    <div class="rdfs-modal-header">
-      <h5 class="mb-0">Edit Driver</h5>
-      <button type="button" class="btn-close" aria-label="Close" data-modal-close></button>
-    </div>
-    <div class="rdfs-modal-body" id="driverEditModalBody">
-      <div class="text-center py-4">Loading form...</div>
-    </div>
+  <!-- LOADING INDICATOR -->
+  <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+    <div class="spinner"></div>
+    <span>Searching...</span>
   </div>
+
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const body = document.body;
-  const modal = document.getElementById("driverEditModal");
-  const modalBody = document.getElementById("driverEditModalBody");
-
-  if (!modal || !modalBody) return;
-
-  const loader = '<div class="text-center py-4">Loading form...</div>';
-
-  const openModal = () => {
-    modal.classList.remove("hidden");
-    body.classList.add("rdfs-modal-open");
-  };
-  const closeModal = () => {
-    modal.classList.add("hidden");
-    body.classList.remove("rdfs-modal-open");
-  };
-
-  const handleForm = (form) => {
-    if (!form) return;
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const submitButton = form.querySelector('[type="submit"]');
-      submitButton?.setAttribute("disabled", "disabled");
-
-      try {
-        const response = await fetch(form.action, {
-          method: "POST",
-          body: new FormData(form),
-          credentials: "same-origin",
-        });
-
-        const payload = await response.json();
-
-        if (payload.success) {
-          closeModal();
-          window.location.reload();
-          return;
-        }
-
-        if (payload.html) {
-          modalBody.innerHTML = payload.html;
-          handleForm(modalBody.querySelector("form"));
-        } else {
-          modalBody.innerHTML = `<div class="text-danger p-3">${payload.message || "Unable to save changes."}</div>`;
-        }
-
-      } catch (error) {
-        modalBody.innerHTML = `<div class="text-danger p-3">${error.message}</div>`;
-      } finally {
-        submitButton?.removeAttribute("disabled");
-      }
-    });
-  };
-
-  const loadForm = async (url) => {
-    if (!url) return;
-    modalBody.innerHTML = loader;
-    openModal();
-
-    try {
-      const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
-      if (!response.ok) throw new Error("Failed to load edit form.");
-      const payload = await response.json();
-      modalBody.innerHTML = payload.html || "<div class=\"text-danger p-3\">Unable to load form.</div>";
-      handleForm(modalBody.querySelector("form"));
-    } catch (error) {
-      modalBody.innerHTML = `<div class="text-danger p-3">${error.message}</div>`;
-    }
-  };
-
-  document.querySelectorAll(".btn-edit-driver").forEach(button => {
-    button.addEventListener("click", () => loadForm(button.dataset.editUrl));
-  });
-
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal || event.target.closest("[data-modal-close]")) {
-      closeModal();
-    }
-  });
-});
-</script>
-
+<script src="{% static 'js/vehicles/driver-list-search.js' %}?v=2.0"></script>
 {% endblock %}

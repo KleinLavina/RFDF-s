@@ -553,16 +553,34 @@ def edit_driver(request, driver_id):
     if form.is_valid():
         try:
             form.save()
+            messages.success(request, "✅ Driver details updated successfully.")
+            
+            # Check if it's an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+            else:
+                # For non-AJAX, redirect back to detail page
+                return redirect('vehicles:driver_detail', driver_id=driver.id)
+                
         except IntegrityError as ie:
             form.add_error(None, str(ie))
+            messages.error(request, f"Database error: {str(ie)}")
         except ValidationError as ve:
             form.add_error(None, ve)
-        else:
-            messages.success(request, "✅ Driver details updated successfully.")
-            return JsonResponse({'success': True})
+            messages.error(request, f"Validation error: {str(ve)}")
+    else:
+        # Form has errors
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(request, f"{field}: {error}")
 
-    html = _render_driver_edit_partial(request, form, driver)
-    return JsonResponse({'success': False, 'html': html})
+    # If AJAX and has errors, return JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        html = _render_driver_edit_partial(request, form, driver)
+        return JsonResponse({'success': False, 'html': html})
+    else:
+        # For non-AJAX with errors, redirect back
+        return redirect('vehicles:driver_detail', driver_id=driver.id)
 
 
 @login_required
@@ -783,54 +801,239 @@ def ajax_deposit(request):
 @login_required
 @user_passes_test(is_staff_admin_or_admin)
 def registered_vehicles(request):
+    """
+    Display list of all registered vehicles with auto-filtering search and sorting.
+    Read-only view - all edits/deletes happen in detail page.
+    """
+    from .expiry_utils import annotate_vehicles_with_expiry
+    from datetime import date
+    
+    query = request.GET.get('q', '').strip()
+    sort_by = request.GET.get('sort', 'newest')
+
+    # Optimize query with select_related
     vehicle_qs = (
         Vehicle.objects
-        .select_related('assigned_driver')
-        .order_by('-date_registered')
+        .select_related('assigned_driver', 'route')
     )
 
-    paginator = Paginator(vehicle_qs, 16)  # ✅ 16 per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    # Apply search filter
+    if query:
+        vehicle_qs = vehicle_qs.filter(
+            Q(vehicle_name__icontains=query) |
+            Q(license_plate__icontains=query) |
+            Q(vin_number__icontains=query) |
+            Q(assigned_driver__first_name__icontains=query) |
+            Q(assigned_driver__last_name__icontains=query)
+        )
 
-    return render(
-        request,
-        'vehicles/registered_vehicles.html',
-        {
-            'page_obj': page_obj
-        }
-    )
+    # Annotate with expiry information before sorting
+    vehicles = annotate_vehicles_with_expiry(vehicle_qs)
+    
+    # Convert to list for custom sorting
+    vehicles_list = list(vehicles)
+    today = date.today()
+
+    # Apply sorting
+    if sort_by == 'oldest':
+        vehicles_list.sort(key=lambda v: v.date_registered)
+    elif sort_by == 'name-asc':
+        vehicles_list.sort(key=lambda v: v.vehicle_name.lower())
+    elif sort_by == 'name-desc':
+        vehicles_list.sort(key=lambda v: v.vehicle_name.lower(), reverse=True)
+    elif sort_by == 'expiry-near':
+        # Near expiry first (expired or expiring within 30 days)
+        def near_expiry_key(v):
+            if not v.expiry_info['expiry_date']:
+                return (2, None)  # No expiry date - last
+            days = v.expiry_info['days_remaining']
+            if days is None or days < 0:
+                return (0, days if days else 0)  # Expired - first
+            elif days <= 30:
+                return (0, days)  # Near expiry - first, sorted by days
+            else:
+                return (1, days)  # Not near expiry - middle
+        vehicles_list.sort(key=near_expiry_key)
+    elif sort_by == 'expiry-expired':
+        # Already expired first
+        def expired_key(v):
+            if not v.expiry_info['expiry_date']:
+                return (2, None)
+            days = v.expiry_info['days_remaining']
+            if days is None or days < 0:
+                return (0, days if days else 0)  # Expired first
+            else:
+                return (1, days)  # Not expired last
+        vehicles_list.sort(key=expired_key)
+    elif sort_by == 'expiry-longest':
+        # Longest time remaining first
+        def longest_key(v):
+            if not v.expiry_info['expiry_date']:
+                return -999999  # No expiry - last
+            days = v.expiry_info['days_remaining']
+            return days if days is not None else -999999
+        vehicles_list.sort(key=longest_key, reverse=True)
+    elif sort_by == 'expiry-shortest':
+        # Shortest time remaining first (including expired)
+        def shortest_key(v):
+            if not v.expiry_info['expiry_date']:
+                return 999999  # No expiry - last
+            days = v.expiry_info['days_remaining']
+            return days if days is not None else 999999
+        vehicles_list.sort(key=shortest_key)
+    else:  # newest (default)
+        vehicles_list.sort(key=lambda v: v.date_registered, reverse=True)
+
+    context = {
+        'vehicles': vehicles_list,
+    }
+
+    return render(request, 'vehicles/registered_vehicles.html', context)
 
 
 
 @login_required
 @user_passes_test(is_staff_admin_or_admin)
 def registered_drivers(request):
+    """
+    Display list of all registered drivers with auto-filtering search and sorting.
+    Read-only view - all edits/deletes happen in detail page.
+    """
+    from .expiry_utils import annotate_drivers_with_expiry
+    from datetime import date
+    
     query = request.GET.get('q', '').strip()
+    sort_by = request.GET.get('sort', 'name-asc')
 
-    driver_qs = Driver.objects.all().order_by('-id')
+    # Optimize query with prefetch
+    driver_qs = Driver.objects.prefetch_related('vehicles')
 
+    # Apply search filter
     if query:
         driver_qs = driver_qs.filter(
             Q(first_name__icontains=query) |
             Q(last_name__icontains=query) |
             Q(middle_name__icontains=query) |
             Q(license_number__icontains=query) |
-            Q(mobile_number__icontains=query)
+            Q(mobile_number__icontains=query) |
+            Q(email__icontains=query)
         )
 
-    paginator = Paginator(driver_qs, 16)  # ✅ 16 per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    # Annotate with expiry information before sorting
+    drivers = annotate_drivers_with_expiry(driver_qs)
+    
+    # Convert to list for custom sorting
+    drivers_list = list(drivers)
+    today = date.today()
 
-    return render(
-        request,
-        'vehicles/registered_drivers.html',
-        {
-            'page_obj': page_obj,
-            'query': query  # ✅ keep search text
-        }
+    # Apply sorting
+    if sort_by == 'name-desc':
+        drivers_list.sort(key=lambda d: (d.first_name.lower(), d.last_name.lower()), reverse=True)
+    elif sort_by == 'newest':
+        drivers_list.sort(key=lambda d: d.id, reverse=True)
+    elif sort_by == 'oldest':
+        drivers_list.sort(key=lambda d: d.id)
+    elif sort_by == 'expiry-near':
+        # Near expiry first (expired or expiring within 30 days)
+        def near_expiry_key(d):
+            if not d.expiry_info['expiry_date']:
+                return (2, None)  # No expiry date - last
+            days = d.expiry_info['days_remaining']
+            if days is None or days < 0:
+                return (0, days if days else 0)  # Expired - first
+            elif days <= 30:
+                return (0, days)  # Near expiry - first, sorted by days
+            else:
+                return (1, days)  # Not near expiry - middle
+        drivers_list.sort(key=near_expiry_key)
+    elif sort_by == 'expiry-expired':
+        # Already expired first
+        def expired_key(d):
+            if not d.expiry_info['expiry_date']:
+                return (2, None)
+            days = d.expiry_info['days_remaining']
+            if days is None or days < 0:
+                return (0, days if days else 0)  # Expired first
+            else:
+                return (1, days)  # Not expired last
+        drivers_list.sort(key=expired_key)
+    elif sort_by == 'expiry-longest':
+        # Longest time remaining first
+        def longest_key(d):
+            if not d.expiry_info['expiry_date']:
+                return -999999  # No expiry - last
+            days = d.expiry_info['days_remaining']
+            return days if days is not None else -999999
+        drivers_list.sort(key=longest_key, reverse=True)
+    elif sort_by == 'expiry-shortest':
+        # Shortest time remaining first (including expired)
+        def shortest_key(d):
+            if not d.expiry_info['expiry_date']:
+                return 999999  # No expiry - last
+            days = d.expiry_info['days_remaining']
+            return days if days is not None else 999999
+        drivers_list.sort(key=shortest_key)
+    else:  # name-asc (default)
+        drivers_list.sort(key=lambda d: (d.first_name.lower(), d.last_name.lower()))
+
+    context = {
+        'drivers': drivers_list,
+        'today': timezone.now().date(),
+    }
+
+    return render(request, 'vehicles/registered_drivers.html', context)
+
+
+@login_required
+@user_passes_test(is_staff_admin_or_admin)
+def driver_detail(request, driver_id):
+    """
+    Driver profile/overview page with full details.
+    Allows editing and deleting from this page only.
+    """
+    driver = get_object_or_404(Driver.objects.prefetch_related('vehicles'), pk=driver_id)
+    
+    # Get all vehicles assigned to this driver
+    vehicles = driver.vehicles.select_related('route').all()
+    
+    context = {
+        'driver': driver,
+        'vehicles': vehicles,
+        'total_vehicles': vehicles.count(),
+    }
+    
+    return render(request, 'vehicles/driver_detail.html', context)
+
+
+@login_required
+@user_passes_test(is_staff_admin_or_admin)
+def vehicle_detail(request, vehicle_id):
+    """
+    Vehicle profile/overview page with full details.
+    Allows editing and deleting from this page only.
+    """
+    from .expiry_utils import get_vehicle_expiry_info
+    from .models import Route
+    
+    vehicle = get_object_or_404(
+        Vehicle.objects.select_related('assigned_driver', 'route'),
+        pk=vehicle_id
     )
+    
+    # Add expiry information
+    vehicle.expiry_info = get_vehicle_expiry_info(vehicle)
+    
+    # Get all drivers and routes for edit form dropdowns
+    all_drivers = Driver.objects.all().order_by('first_name', 'last_name')
+    all_routes = Route.objects.filter(active=True).order_by('name')
+    
+    context = {
+        'vehicle': vehicle,
+        'all_drivers': all_drivers,
+        'all_routes': all_routes,
+    }
+    
+    return render(request, 'vehicles/vehicle_detail.html', context)
 
 
 

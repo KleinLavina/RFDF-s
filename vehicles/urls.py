@@ -12,6 +12,10 @@ urlpatterns = [
     # ✅ Registered records
     path('registered/', views.registered_vehicles, name='registered_vehicles'),
     path('registered-drivers/', views.registered_drivers, name='registered_drivers'),
+    
+    # ✅ Detail/Profile pages
+    path('driver/<int:driver_id>/', views.driver_detail, name='driver_detail'),
+    path('vehicle/<int:vehicle_id>/', views.vehicle_detail, name='vehicle_detail'),
 
     # ✅ QR / printable page (staff-only)
     path('vehicle/<int:vehicle_id>/qr/', views.vehicle_qr_view, name='vehicle_qr'),

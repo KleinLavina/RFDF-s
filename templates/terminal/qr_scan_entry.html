@@ -1,400 +1,163 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}QR Scan Entry & Departure | RDFS{% endblock %}
+{% block title %}QR Entry & Departure | RDFS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/terminal/qr-entry.css' %}?v=1.0">
+{% endblock %}
 
 {% block content %}
 
-<style>
-/* =====================================================
-   RDFS – QR ENTRY & DEPARTURE
-===================================================== */
-.rdfs-qr-scope{
-  --rdfs-blue:#112666;
-  --rdfs-blue-dark:#0c1c4a;
-  --rdfs-accent:#2563eb;
-  --rdfs-soft:#e8f4fd;
-
-  --rdfs-text:#0f172a;
-  --rdfs-muted:#64748b;
-
-  --gray-100:#f7fafc;
-  --gray-200:#edf2f7;
-  --gray-300:#e2e8f0;
-
-  --success:#198754;
-  --warning:#f59e0b;
-  --danger:#dc3545;
-
-  --shadow-sm:0 1px 3px rgba(0,0,0,.08);
-  --shadow-md:0 8px 18px rgba(0,0,0,.12);
-
-  font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
-  color:var(--rdfs-text);
-}
-
-/* HEADER (MATCHED TO REGISTERED DRIVERS) */
-.rdfs-qr-header{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:1rem;
-  margin-bottom:1.25rem;
-}
-
-.rdfs-qr-title{
-  font-weight:800;
-  color:var(--rdfs-blue-dark);
-}
-
-.rdfs-qr-subtitle{
-  font-size:.9rem;
-  color:var(--rdfs-muted);
-}
-
-/* RETURN BUTTON – REPLICATED */
-.rdfs-qr-back{
-  border-radius:999px;
-  font-weight:600;
-  background:#fff;
-  color:var(--rdfs-blue-dark);
-  border:1.5px solid var(--rdfs-blue);
-  white-space:nowrap;
-}
-.rdfs-qr-back:hover{
-  background:var(--rdfs-soft);
-}
-
-/* INFO CARDS */
-.rdfs-qr-info{
-  background:var(--gray-100);
-  border:1px solid var(--gray-300);
-  border-radius:10px;
-  box-shadow:var(--shadow-sm);
-}
-
-/* MAIN CARD */
-.rdfs-qr-card{
-  border-radius:18px;
-  box-shadow:var(--shadow-md);
-  border:1px solid var(--gray-200);
-  overflow:hidden;
-}
-
-/* CARD HEADER */
-.rdfs-qr-card-header{
-  background:linear-gradient(135deg,var(--rdfs-accent),var(--rdfs-blue));
-  color:#fff;
-}
-
-/* SCANNER */
-#rdfsQrScannerWrap{position:relative;}
-#rdfsQrReader{
-  background:#111827;
-}
-
-#rdfsQrResetCooldown{
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:rgba(255,255,255,.95);
-  text-align:center;
-  padding:1rem;
-  font-weight:700;
-  color:#b45309;
-  font-size:1rem;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(15,23,42,.2);
-  pointer-events:none;
-  opacity:0;
-  transition:opacity .2s ease;
-}
-
-.rdfs-qr-reset-active #rdfsQrResetCooldown{
-  opacity:1;
-}
-
-/* FEEDBACK */
-.rdfs-qr-feedback{
-  font-weight:600;
-}
-
-/* FLASH */
-@keyframes rdfsFlashGreen{
-  0%{background:rgba(25,135,84,.15);}
-  50%{background:rgba(25,135,84,.45);}
-  100%{background:transparent;}
-}
-@keyframes rdfsFlashRed{
-  0%{background:rgba(220,53,69,.15);}
-  50%{background:rgba(220,53,69,.45);}
-  100%{background:transparent;}
-}
-.rdfs-flash-success{animation:rdfsFlashGreen 1.4s ease;}
-.rdfs-flash-error{animation:rdfsFlashRed 1.4s ease;}
-</style>
-
-<div class="container py-4 rdfs-qr-scope">
+<div class="qr-entry-container">
 
   <!-- HEADER -->
-  <div class="rdfs-qr-header">
-    <div>
-      <h3 class="rdfs-qr-title mb-1">
-        <i class="bi bi-qr-code-scan me-2"></i>
-        QR Entry & Departure
-      </h3>
-      <p class="rdfs-qr-subtitle mb-0">
-        Scan vehicle QR codes to automatically record entry or departure.
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <i class="bi bi-qr-code-scan"></i>
+        QR Entry & Departure Scanner
+      </h1>
+      <p class="page-subtitle">
+        Scan vehicle QR codes to automatically record terminal entry or departure
       </p>
     </div>
-
-    <!-- RETURN BUTTON (REPLICATED) -->
     <a href="{% if user.role == 'admin' %}{% url 'accounts:admin_dashboard' %}{% else %}{% url 'accounts:staff_dashboard' %}{% endif %}"
-       class="btn rdfs-qr-back">
-      <i class="bi bi-arrow-left-circle me-1"></i>
-      Return to Dashboard
+       class="btn-back">
+      <i class="bi bi-arrow-left-circle"></i>
+      Dashboard
     </a>
   </div>
 
   <!-- INFO CARDS -->
-  <div class="row g-3 mb-4">
-    <div class="col-4">
-      <div class="p-3 text-center rdfs-qr-info">
-        <div class="text-muted small">Current Fee</div>
-        <div class="fw-bold">₱{{ terminal_fee }}</div>
+  <div class="info-cards-grid">
+    <div class="info-card">
+      <div class="info-card-icon">
+        <i class="bi bi-cash-coin"></i>
+      </div>
+      <div class="info-card-content">
+        <div class="info-card-label">Terminal Fee</div>
+        <div class="info-card-value">₱{{ terminal_fee }}</div>
       </div>
     </div>
-    <div class="col-4">
-      <div class="p-3 text-center rdfs-qr-info">
-        <div class="text-muted small">Minimum Deposit</div>
-        <div class="fw-bold">₱{{ min_deposit }}</div>
+    <div class="info-card">
+      <div class="info-card-icon">
+        <i class="bi bi-wallet2"></i>
+      </div>
+      <div class="info-card-content">
+        <div class="info-card-label">Minimum Deposit</div>
+        <div class="info-card-value">₱{{ min_deposit }}</div>
       </div>
     </div>
-    <div class="col-4">
-      <div class="p-3 text-center rdfs-qr-info">
-        <div class="text-muted small">Cooldown</div>
-        <div class="fw-bold">{{ cooldown }} min</div>
+    <div class="info-card">
+      <div class="info-card-icon">
+        <i class="bi bi-clock-history"></i>
+      </div>
+      <div class="info-card-content">
+        <div class="info-card-label">Entry Cooldown</div>
+        <div class="info-card-value">{{ cooldown }} min</div>
       </div>
     </div>
   </div>
 
-  <!-- MAIN CARD -->
-  <div class="card rdfs-qr-card">
-    <div class="card-header rdfs-qr-card-header">
-      <h6 class="mb-0 fw-bold">
-        <i class="bi bi-camera me-2"></i>
-        Scan Vehicle QR Code
-      </h6>
+  <!-- STATUS LEGEND -->
+  <div class="status-legend">
+    <div class="legend-title">
+      <i class="bi bi-info-circle"></i>
+      System Status Indicators
+    </div>
+    <div class="legend-items">
+      <div class="legend-item">
+        <span class="legend-badge badge-entry">
+          <i class="bi bi-box-arrow-in-right"></i>
+          Entry
+        </span>
+        <span class="legend-text">Vehicle entering terminal</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-badge badge-departure">
+          <i class="bi bi-box-arrow-right"></i>
+          Departure
+        </span>
+        <span class="legend-text">Vehicle leaving terminal</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-badge badge-queued">
+          <i class="bi bi-hourglass-split"></i>
+          Queued
+        </span>
+        <span class="legend-text">Already in queue</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN SCANNER CARD -->
+  <div class="scanner-card">
+    <div class="scanner-card-header">
+      <div class="scanner-header-content">
+        <i class="bi bi-camera-video"></i>
+        <div>
+          <h2 class="scanner-title">QR Code Scanner</h2>
+          <p class="scanner-subtitle">Position QR code within the frame</p>
+        </div>
+      </div>
+      <div class="scanner-status" id="scannerStatus">
+        <span class="status-dot"></span>
+        <span class="status-text">Ready</span>
+      </div>
     </div>
 
-    <div class="card-body text-center">
+    <div class="scanner-card-body">
 
-      <p class="text-muted mb-3" style="font-size:.95rem;">
-        System automatically determines
-        <span class="fw-bold text-success">Entry</span> or
-        <span class="fw-bold text-warning">Departure</span>.
-      </p>
-
-      <!-- SCANNER -->
-      <div id="rdfsQrScannerWrap"
-           class="rounded mb-3"
-           style="width:100%;max-width:400px;margin:auto;">
-        <div id="rdfsQrReader"></div>
-        
-        <!-- Start Camera Button -->
-        <div id="startCameraSection" class="text-center mb-3">
-          <button id="startCameraBtn" class="btn btn-primary btn-lg">
-            <i class="bi bi-camera-fill me-2"></i>
-            Start Camera / Scan QR
-          </button>
-          <p class="text-muted small mt-2">
-            Click the button above to activate camera for QR scanning
-          </p>
+      <!-- START CAMERA SECTION -->
+      <div id="startCameraSection" class="start-camera-section">
+        <div class="camera-icon-large">
+          <i class="bi bi-camera-fill"></i>
         </div>
+        <h3 class="start-camera-title">Activate Camera to Begin</h3>
+        <p class="start-camera-text">
+          Click the button below to start the QR code scanner
+        </p>
+        <button id="startCameraBtn" class="btn-start-camera">
+          <i class="bi bi-camera-video-fill"></i>
+          Start Camera
+        </button>
+      </div>
+
+      <!-- QR SCANNER -->
+      <div id="qrScannerWrap" class="qr-scanner-wrap">
+        <div id="rdfsQrReader" class="qr-reader"></div>
         
-        <div id="rdfsQrResetCooldown" class="d-none">
-          <div>
-            You're already queued. Scan again after the cooldown to confirm a reset without an extra fee.
+        <!-- RESET COOLDOWN OVERLAY -->
+        <div id="rdfsQrResetCooldown" class="reset-cooldown-overlay">
+          <div class="reset-cooldown-content">
+            <i class="bi bi-hourglass-split"></i>
+            <h4>Already Queued</h4>
+            <p>Scan again after cooldown to reset your position without additional fee</p>
           </div>
         </div>
       </div>
 
-      <!-- FEEDBACK -->
-      <div id="rdfsQrFeedback"
-           class="alert d-none mt-3 rdfs-qr-feedback">
-      </div>
-      <div id="rdfsQrResetHint"
-           class="small text-warning mt-2 d-none">
-        You're already in the queue. Scan again to reset your spot without another fee.
+      <!-- FEEDBACK AREA -->
+      <div id="feedbackArea" class="feedback-area">
+        <!-- Status messages will appear here -->
       </div>
 
-      <!-- CSRF -->
-      <form style="display:none;">{% csrf_token %}</form>
+      <!-- RESET HINT -->
+      <div id="rdfsQrResetHint" class="reset-hint">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>You're already in queue. Scan again to reset your position without another fee.</span>
+      </div>
 
     </div>
   </div>
+
+  <!-- CSRF -->
+  <form style="display:none;">{% csrf_token %}</form>
+
 </div>
 
-<!-- QR LIB -->
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
-<script>
-/* =====================================================
-   RDFS – QR LOGIC (UNCHANGED)
-===================================================== */
-const ok=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-const err=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
-
-let paused=false;
-let awaitingReset=false;
-let queuedQr="";
-let queueResetCooldown=false;
-let last="";
-const resetHint=document.getElementById("rdfsQrResetHint");
-const resetOverlay=document.getElementById("rdfsQrResetCooldown");
-const scannerWrap=document.getElementById("rdfsQrScannerWrap");
-
-function show(msg,type="info"){
-  const fb=document.getElementById("rdfsQrFeedback");
-  const scope=document.querySelector(".rdfs-qr-scope");
-
-  fb.className="alert mt-3 rdfs-qr-feedback";
-  fb.textContent=msg;
-  fb.classList.remove("d-none","alert-success","alert-danger","alert-info","alert-warning");
-
-  if(type==="success") fb.classList.add("alert-success");
-  else if(type==="danger") fb.classList.add("alert-danger");
-  else if(type==="warning") fb.classList.add("alert-warning");
-  else fb.classList.add("alert-info");
-
-  scope.classList.remove("rdfs-flash-success","rdfs-flash-error");
-  if(type==="success"){scope.classList.add("rdfs-flash-success");ok.play().catch(()=>{});}
-  if(type==="danger"){scope.classList.add("rdfs-flash-error");err.play().catch(()=>{});}
-}
-
-function toggleResetHint(showHint){
-  if(!resetHint) return;
-  resetHint.classList.toggle("d-none",!showHint);
-}
-
-function toggleResetCooldownOverlay(show){
-  if(!resetOverlay || !scannerWrap) return;
-  resetOverlay.classList.toggle("d-none",!show);
-  scannerWrap.classList.toggle("rdfs-qr-reset-active", show);
-}
-
-function startResetCooldown(){
-  queueResetCooldown=true;
-  toggleResetCooldownOverlay(true);
-  setTimeout(()=>{
-    queueResetCooldown=false;
-    toggleResetCooldownOverlay(false);
-  },2000);
-}
-
-async function postQR(qr){
-  try{
-    if(awaitingReset && queuedQr && queuedQr!==qr){
-      awaitingReset=false;
-      queuedQr="";
-      toggleResetHint(false);
-    }
-
-    if(awaitingReset && queueResetCooldown && queuedQr===qr){
-      show("⏳ Hold on 2 seconds before confirming your reset.","warning");
-      return;
-    }
-    const payload=new URLSearchParams({qr_code:qr});
-    if(awaitingReset && queuedQr===qr){
-      payload.append("confirm_reset","1");
-    }
-
-    const r=await fetch("{% url 'terminal:qr_scan_entry' %}",{
-      method:"POST",
-      headers:{
-        "X-CSRFToken":document.querySelector('[name=csrfmiddlewaretoken]').value,
-        "X-Requested-With":"XMLHttpRequest"
-      },
-      body:payload
-    });
-    const d=await r.json();
-
-    if(d.status==="success"){
-      awaitingReset=false;
-      queuedQr="";
-      toggleResetHint(false);
-      toggleResetCooldownOverlay(false);
-      show(d.message,"success");
-    }else if(d.status==="queued"){
-      awaitingReset=true;
-      queuedQr=qr;
-      toggleResetHint(true);
-      startResetCooldown();
-      show(d.message,"warning");
-    }else{
-      awaitingReset=false;
-      queuedQr="";
-      toggleResetHint(false);
-      toggleResetCooldownOverlay(false);
-      show(d.message,"danger");
-    }
-
-    const pauseMs=d.status==="success"?4000:d.status==="queued"?0:3000;
-    if(pauseMs>0) pause(pauseMs);
-  }catch{
-    awaitingReset=false;
-    queuedQr="";
-    toggleResetHint(false);
-    show("Network error","danger");
-  }
-}
-
-function pause(ms){
-  paused=true;
-  setTimeout(()=>{
-    paused=false;
-    last="";
-    show("Ready for next scan","info");
-  },ms);
-}
-
-let qrScanner = null;
-
-function startCamera() {
-  if (qrScanner) {
-    show("Camera already started", "warning");
-    return;
-  }
-  
-  const startBtn = document.getElementById('startCameraBtn');
-  const startSection = document.getElementById('startCameraSection');
-  
-  // Hide start button section
-  startSection.classList.add('d-none');
-  
-  // Initialize QR scanner
-  qrScanner = new Html5Qrcode("rdfsQrReader");
-  qrScanner.start({facingMode:"environment"},{fps:10,qrbox:250},txt=>{
-    if(paused||(txt===last&&!awaitingReset)) return;
-    last=txt;
-    postQR(txt);
-  }).catch(e=>{
-    show("Camera error: "+e,"danger");
-    // Show start button again on error
-    startSection.classList.remove('d-none');
-    qrScanner = null;
-  });
-}
-
-// Add event listener for start button
-document.addEventListener("DOMContentLoaded",()=>{
-  const startBtn = document.getElementById('startCameraBtn');
-  if (startBtn) {
-    startBtn.addEventListener('click', startCamera);
-  }
-});
-</script>
+<script src="{% static 'js/terminal/qr-entry.js' %}?v=1.0"></script>
 
 {% endblock %}
