@@ -363,11 +363,7 @@ class VehicleRegistrationForm(forms.ModelForm):
                 f"❌ License plate is too long. Maximum 12 characters allowed (currently {len(value)} characters)."
             )
         
-        # Format validation: letters, numbers, spaces, hyphens only
-        if not re.match(r'^[A-Z0-9][A-Z0-9\s\-]{1,11}$', value):
-            raise ValidationError(
-                "❌ Invalid license plate format. Use only letters, numbers, spaces, or hyphens."
-            )
+        # No pattern validation - accept any characters
         
         # Check uniqueness
         if self.instance.pk:
@@ -400,8 +396,7 @@ class VehicleRegistrationForm(forms.ModelForm):
                 f"❌ Registration number is too long. Maximum 50 characters allowed (currently {len(value)} characters)."
             )
 
-        if not re.fullmatch(r'[A-Z0-9\-]+', value):
-            raise ValidationError("❌ Registration number can only contain letters, numbers, and hyphens (no spaces or symbols).")
+        # No pattern validation - accept any characters
         
         # Check uniqueness
         if self.instance.pk:

@@ -141,16 +141,16 @@ VEHICLE_VALIDATION_RULES = {
         'required': True,
         'min_length': 5,
         'max_length': 50,
-        'pattern': r'^[A-Z0-9\-]+$',
-        'placeholder': 'e.g., NX123456',
+        'pattern': None,  # No pattern restriction - accept any characters
+        'placeholder': 'e.g., NX-123456, ABC 123, REG#2024',
         'label': 'Registration Number',
         'icon': 'fa-hashtag',
-        'help_text': 'Enter the vehicle\'s registration number',
+        'help_text': 'Enter the vehicle\'s registration number (any format accepted)',
         'error_messages': {
             'required': '❌ Registration number is required.',
             'min_length': '❌ Registration number is too short. Minimum 5 characters required.',
             'max_length': '❌ Registration number is too long. Maximum 50 characters allowed.',
-            'invalid': '❌ Registration number can only contain letters, numbers, and hyphens (no spaces or symbols).',
+            'invalid': '❌ Invalid registration number format.',
             'unique': '❌ This registration number is already registered to another vehicle.',
         }
     },
@@ -171,16 +171,16 @@ VEHICLE_VALIDATION_RULES = {
         'required': True,
         'min_length': 2,
         'max_length': 12,
-        'pattern': r'^[A-Z0-9][A-Z0-9\s\-]{1,11}$',
-        'placeholder': 'e.g., ABC 123',
+        'pattern': None,  # No pattern restriction - accept any characters
+        'placeholder': 'e.g., ABC 123, XYZ-456',
         'label': 'License Plate',
         'icon': 'fa-rectangle-list',
-        'help_text': 'Enter the vehicle\'s license plate number',
+        'help_text': 'Enter the vehicle\'s license plate number (any format accepted)',
         'error_messages': {
             'required': '❌ License plate is required.',
             'min_length': '❌ License plate is too short. Minimum 2 characters required.',
             'max_length': '❌ License plate is too long. Maximum 12 characters allowed.',
-            'invalid': '❌ Invalid license plate format. Use only letters, numbers, spaces, or hyphens.',
+            'invalid': '❌ Invalid license plate format.',
             'unique': '❌ This license plate is already registered to another vehicle.',
         }
     },
@@ -202,8 +202,16 @@ def get_vehicle_frontend_validation_config():
     Generate frontend-compatible validation configuration for vehicles.
     Returns a dictionary that can be serialized to JSON for JavaScript.
     """
+    from django.utils import timezone
+    current_year = timezone.now().year
+    
     config = {}
     for field_name, rules in VEHICLE_VALIDATION_RULES.items():
+        # Set max_value for year_model dynamically
+        max_value = rules.get('max_value')
+        if field_name == 'year_model' and max_value is None:
+            max_value = current_year + 1
+        
         config[field_name] = {
             'required': rules.get('required', False),
             'minLength': rules.get('min_length'),
@@ -212,7 +220,7 @@ def get_vehicle_frontend_validation_config():
             'pattern': rules.get('pattern'),
             'type': rules.get('type', 'text'),
             'minValue': rules.get('min_value'),
-            'maxValue': rules.get('max_value'),
+            'maxValue': max_value,
             'errors': rules.get('error_messages', {})
         }
     return config
