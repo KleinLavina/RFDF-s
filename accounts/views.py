@@ -204,15 +204,8 @@ def admin_dashboard_view(request):
     total_drivers = Driver.objects.count()
     total_vehicles = Vehicle.objects.count()
 
-    # Prefer QueueHistory if available; fall back to EntryLog if your terminal app still uses it.
-    total_queue = 0
-    if QueueHistory is not None:
-        total_queue = QueueHistory.objects.filter().count()
-    else:
-        try:
-            total_queue = EntryLog.objects.filter(status=EntryLog.STATUS_SUCCESS).count()
-        except Exception:
-            total_queue = 0
+    # Active queue count: vehicles currently in terminal (is_active=True, status=success)
+    total_queue = EntryLog.objects.filter(is_active=True, status=EntryLog.STATUS_SUCCESS).count()
 
     total_profit = Profit.objects.aggregate(Sum('amount'))['amount__sum'] or 0
 
@@ -263,7 +256,8 @@ def admin_dashboard_view(request):
 def staff_dashboard_view(request):
     total_drivers = Driver.objects.count()
     total_vehicles = Vehicle.objects.count()
-    total_queue = EntryLog.objects.filter(status=EntryLog.STATUS_SUCCESS).count()
+    # Active queue count: vehicles currently in terminal (is_active=True, status=success)
+    total_queue = EntryLog.objects.filter(is_active=True, status=EntryLog.STATUS_SUCCESS).count()
 
     context = {
         'total_drivers': total_drivers,

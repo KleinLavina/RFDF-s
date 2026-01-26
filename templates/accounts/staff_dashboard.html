@@ -2,184 +2,175 @@
 {% load static %}
 {% block title %}Staff Dashboard | RDFS{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/accounts/staff-dashboard.css' %}?v=1.0">
+{% endblock %}
+
 {% block content %}
-
-<style>
-/* =====================================================
-   RDFS – STAFF DASHBOARD (SCOPED STYLES)
-   Prefix: rdfs-staff-
-===================================================== */
-.rdfs-staff-scope{
-  --rdfs-blue:#112666;
-  --rdfs-blue-dark:#0c1c4a;
-  --rdfs-accent:#2563eb;
-  --rdfs-soft:#e8f4fd;
-
-  --rdfs-text:#0f172a;
-  --rdfs-muted:#64748b;
-
-  --gray-100:#f7fafc;
-  --gray-200:#edf2f7;
-  --gray-300:#e2e8f0;
-
-  --shadow-sm:0 1px 3px rgba(0,0,0,.08);
-  --shadow-md:0 8px 18px rgba(0,0,0,.12);
-
-  font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
-  color:var(--rdfs-text);
-}
-
-/* HEADER */
-.rdfs-staff-title{
-  font-weight:700;
-  color:var(--rdfs-blue);
-}
-
-/* SUMMARY CARDS */
-.rdfs-staff-card{
-  border-radius:16px;
-  padding:1.2rem;
-  color:#fff;
-  box-shadow:var(--shadow-sm);
-}
-
-.rdfs-staff-card h5{
-  font-size:.9rem;
-  font-weight:600;
-  opacity:.9;
-}
-
-.rdfs-staff-card h3{
-  font-weight:700;
-  margin:0;
-}
-
-/* CARD VARIANTS */
-.rdfs-staff-blue{
-  background:linear-gradient(135deg,var(--rdfs-accent),var(--rdfs-blue));
-}
-
-.rdfs-staff-green{
-  background:linear-gradient(135deg,#22c55e,#15803d);
-}
-
-.rdfs-staff-yellow{
-  background:linear-gradient(135deg,#facc15,#ca8a04);
-  color:#1f2937;
-}
-
-/* QUICK ACTIONS */
-.rdfs-staff-action{
-  border:1px solid var(--gray-200);
-  border-radius:16px;
-  padding:1.2rem;
-  background:#fff;
-  box-shadow:var(--shadow-sm);
-  transition:.25s ease;
-  height:100%;
-}
-
-.rdfs-staff-action:hover{
-  transform:translateY(-4px);
-  box-shadow:var(--shadow-md);
-}
-
-.rdfs-staff-action h6{
-  font-weight:700;
-  color:var(--rdfs-blue);
-}
-
-.rdfs-staff-action p{
-  font-size:.85rem;
-  color:var(--rdfs-muted);
-}
-
-/* ACTION BUTTON */
-.rdfs-staff-go{
-  border-radius:999px;
-  font-weight:700;
-  background:linear-gradient(135deg,var(--rdfs-accent),var(--rdfs-blue));
-  border:none;
-  color:#fff;
-}
-</style>
-
-<div class="rdfs-staff-scope container py-4">
-
-  <h2 class="rdfs-staff-title mb-2">
-    <i class="bi bi-house-door-fill me-2"></i>
-    Staff Dashboard
-  </h2>
-
-  <p class="text-muted mb-4">
-    Welcome, <strong>{{ user.username }}</strong>. Here's your quick overview and actions.
-  </p>
-
-  <!-- SUMMARY CARDS -->
-  <div class="row g-3 mb-4">
-
-    <div class="col-md-4">
-      <div class="rdfs-staff-card rdfs-staff-blue">
-        <h5>Registered Drivers</h5>
-        <h3>{{ total_drivers }}</h3>
-      </div>
+<div class="staff-dashboard">
+  <div class="container">
+    
+    <!-- HEADER -->
+    <div class="staff-dashboard__header">
+      <h1 class="staff-dashboard__title">
+        <i class="bi bi-house-heart-fill"></i>
+        Staff Dashboard
+      </h1>
+      <p class="staff-dashboard__subtitle">
+        Welcome, <strong>{{ user.username }}</strong>. Ready to manage terminal operations.
+      </p>
     </div>
 
-    <div class="col-md-4">
-      <div class="rdfs-staff-card rdfs-staff-green">
-        <h5>Registered Vehicles</h5>
-        <h3>{{ total_vehicles }}</h3>
-      </div>
+    <!-- STAT CARDS -->
+    <div class="quick-stats">
+      <a href="{% url 'vehicles:registered_drivers' %}" class="text-decoration-none">
+        <div class="staff-stat-card staff-stat-card--primary">
+          <div class="staff-stat-card__content">
+            <div class="staff-stat-card__icon">
+              <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="staff-stat-card__info">
+              <div class="staff-stat-card__label">Registered Drivers</div>
+              <div class="staff-stat-card__value">{{ total_drivers }}</div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <a href="{% url 'vehicles:registered_vehicles' %}" class="text-decoration-none">
+        <div class="staff-stat-card staff-stat-card--success">
+          <div class="staff-stat-card__content">
+            <div class="staff-stat-card__icon">
+              <i class="bi bi-truck-front-fill"></i>
+            </div>
+            <div class="staff-stat-card__info">
+              <div class="staff-stat-card__label">Registered Vehicles</div>
+              <div class="staff-stat-card__value">{{ total_vehicles }}</div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <a href="{% url 'terminal:transactions' %}" class="text-decoration-none">
+        <div class="staff-stat-card staff-stat-card--warning">
+          <div class="staff-stat-card__content">
+            <div class="staff-stat-card__icon">
+              <i class="bi bi-list-ol"></i>
+            </div>
+            <div class="staff-stat-card__info">
+              <div class="staff-stat-card__label">Vehicles in Queue</div>
+              <div class="staff-stat-card__value">{{ total_queue }}</div>
+            </div>
+          </div>
+        </div>
+      </a>
     </div>
 
-    <div class="col-md-4">
-      <div class="rdfs-staff-card rdfs-staff-yellow">
-        <h5>Vehicles in Queue</h5>
-        <h3>{{ total_queue }}</h3>
-      </div>
+    <!-- QUICK ACTIONS -->
+    <div class="section-header">
+      <h2 class="section-header__title">
+        <i class="bi bi-lightning-charge-fill"></i>
+        Quick Actions
+      </h2>
     </div>
 
-  </div>
-
-  <!-- QUICK ACTIONS -->
-  <h5 class="mb-3 fw-bold">Quick Actions</h5>
-  <div class="row g-3">
-
-    <!-- Register Driver -->
-    <div class="col-md-4">
+    <div class="actions-grid">
       <a href="{% url 'vehicles:register_driver' %}" class="text-decoration-none">
-        <div class="rdfs-staff-action text-center">
-          <h6>Register Driver</h6>
-          <p>Add a new driver to the system.</p>
-          <span class="btn btn-sm rdfs-staff-go">Go</span>
+        <div class="staff-action-card">
+          <div class="staff-action-card__icon">
+            <i class="bi bi-person-plus-fill"></i>
+          </div>
+          <h3 class="staff-action-card__title">Register Driver</h3>
+          <p class="staff-action-card__description">
+            Add a new driver to the system with complete profile information and documentation.
+          </p>
+          <button class="staff-action-card__button">
+            Register Now
+          </button>
         </div>
       </a>
-    </div>
 
-    <!-- Register Vehicle -->
-    <div class="col-md-4">
       <a href="{% url 'vehicles:register_vehicle' %}" class="text-decoration-none">
-        <div class="rdfs-staff-action text-center">
-          <h6>Register Vehicle</h6>
-          <p>Assign a new vehicle to a driver.</p>
-          <span class="btn btn-sm rdfs-staff-go">Go</span>
+        <div class="staff-action-card">
+          <div class="staff-action-card__icon">
+            <i class="bi bi-truck"></i>
+          </div>
+          <h3 class="staff-action-card__title">Register Vehicle</h3>
+          <p class="staff-action-card__description">
+            Register a new vehicle and assign it to a driver with route and capacity details.
+          </p>
+          <button class="staff-action-card__button">
+            Register Now
+          </button>
+        </div>
+      </a>
+
+      <a href="{% url 'terminal:deposits' %}" class="text-decoration-none">
+        <div class="staff-action-card">
+          <div class="staff-action-card__icon">
+            <i class="bi bi-wallet2"></i>
+          </div>
+          <h3 class="staff-action-card__title">Deposit Management</h3>
+          <p class="staff-action-card__description">
+            Record wallet deposits for vehicles and view complete deposit history.
+          </p>
+          <button class="staff-action-card__button">
+            Manage Deposits
+          </button>
+        </div>
+      </a>
+
+      <a href="{% url 'terminal:qr_scan_entry' %}" class="text-decoration-none">
+        <div class="staff-action-card">
+          <div class="staff-action-card__icon">
+            <i class="bi bi-qr-code-scan"></i>
+          </div>
+          <h3 class="staff-action-card__title">QR Entry Scan</h3>
+          <p class="staff-action-card__description">
+            Scan vehicle QR codes for terminal entry and validate wallet balance.
+          </p>
+          <button class="staff-action-card__button">
+            Scan Entry
+          </button>
+        </div>
+      </a>
+
+      <a href="{% url 'terminal:qr_exit_page' %}" class="text-decoration-none">
+        <div class="staff-action-card">
+          <div class="staff-action-card__icon">
+            <i class="bi bi-box-arrow-right"></i>
+          </div>
+          <h3 class="staff-action-card__title">QR Exit Scan</h3>
+          <p class="staff-action-card__description">
+            Scan vehicle QR codes for terminal exit and mark departure completion.
+          </p>
+          <button class="staff-action-card__button">
+            Scan Exit
+          </button>
+        </div>
+      </a>
+
+      <a href="{% url 'terminal:transactions' %}" class="text-decoration-none">
+        <div class="staff-action-card">
+          <div class="staff-action-card__icon">
+            <i class="bi bi-receipt"></i>
+          </div>
+          <h3 class="staff-action-card__title">View Transactions</h3>
+          <p class="staff-action-card__description">
+            View today terminal activity, entries, exits, and revenue summary.
+          </p>
+          <button class="staff-action-card__button">
+            View Activity
+          </button>
         </div>
       </a>
     </div>
 
-    <!-- Deposit Menu -->
-    <div class="col-md-4">
-      <a href="{% url 'terminal:deposits' %}" class="text-decoration-none">
-        <div class="rdfs-staff-action text-center">
-          <h6>Deposit Management</h6>
-          <p>Record wallet deposits for vehicles.</p>
-          <span class="btn btn-sm rdfs-staff-go">Go</span>
-        </div>
-      </a>
+    <!-- FOOTER -->
+    <div class="dashboard-footer">
+      <p>RDFS Terminal Management System · Staff Portal</p>
     </div>
 
   </div>
-
 </div>
-
 {% endblock %}

@@ -51,7 +51,8 @@ def reports_home(request):
         ).aggregate(total=Sum("fee_charged"))["total"] or 0
     )
 
-    active_vehicles = Vehicle.objects.filter(status__in=["queued", "boarding"]).count()
+    # Active queue count: vehicles currently in terminal (is_active=True, status=success)
+    active_vehicles = EntryLog.objects.filter(is_active=True, status=EntryLog.STATUS_SUCCESS).count()
     
     # Count entry logs for today
     today_entry_logs = EntryLog.objects.filter(created_at__date=today).count()

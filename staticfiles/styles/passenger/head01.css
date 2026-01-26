@@ -1,0 +1,263 @@
+/* ===============================
+   FONT: BEBAS NEUE (TTF)
+================================ */
+@font-face{
+  font-family:'Bebas Neue';
+  src:url("/static/fonts/BebasNeue-Regular.ttf") format("truetype");
+  font-display:swap;
+  font-weight:normal;
+  font-style:normal;
+}
+
+/* ==================================================
+   RDFS HEADER – MOBILE FRIENDLY & SAFE
+================================================== */
+:root{
+  --rdfs-blue-x1:#112666;
+  --rdfs-blue-dark-x1:#180f92;
+  --rdfs-bg-x1:#ffffff;
+  --rdfs-text-x1:#1c1b1b;
+  --rdfs-muted-x1:#64748b;
+  --rdfs-shadow-x1:0 10px 28px rgba(0,0,0,.15);
+  --rdfs-radius-x1:14px;
+  --rdfs-transition-x1:all .3s ease;
+}
+
+/* ===============================
+   WRAPPER
+================================ */
+.rdfs-header-x1{
+  position:sticky;
+  top:0;
+  z-index:1200;
+  background:var(--rdfs-bg-x1);
+  box-shadow:0 2px 6px rgba(0,0,0,.1);
+}
+
+/* ===============================
+   CONTAINER
+================================ */
+.rdfs-header__container-x1{
+  max-width:1200px;
+  margin:auto;
+  padding:0 20px;
+  height:78px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:relative;
+}
+
+/* ===============================
+   BRAND
+================================ */
+.rdfs-header__brand-x1{
+  display:flex;
+  align-items:center;
+}
+
+.rdfs-header__logo-x1{
+  height:56px;
+  transition:var(--rdfs-transition-x1);
+}
+
+.rdfs-header__brand-x1:hover .rdfs-header__logo-x1{
+  transform:scale(1.05);
+}
+
+/* ===============================
+   TOGGLE
+================================ */
+.rdfs-header__toggle-x1{
+  display:none;
+  background:none;
+  border:none;
+  font-size:30px;
+  color:var(--rdfs-blue-x1);
+  cursor:pointer;
+  padding:10px;
+  z-index:1300;
+  transition:var(--rdfs-transition-x1);
+}
+
+.rdfs-header__toggle-x1:hover{
+  color:var(--rdfs-blue-dark-x1);
+  transform:scale(1.1);
+}
+
+/* ===============================
+   NAV (DESKTOP)
+================================ */
+.rdfs-header__nav-x1{
+  display:flex;
+  align-items:center;
+  gap:28px;
+}
+
+/* ===============================
+   LINKS (BEBAS NEUE APPLIED)
+================================ */
+.rdfs-header__link-x1{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  text-decoration:none;
+  font-family:'Bebas Neue', Impact, sans-serif;
+  font-size:15px;
+  letter-spacing:.6px;
+  font-weight:400;
+  color:var(--rdfs-text-x1);
+  position:relative;
+  transition:var(--rdfs-transition-x1);
+}
+
+.rdfs-header__link-x1 .rdfs-text-x1 {
+  display: inline-block;
+}
+
+.rdfs-header__link-x1 .rdfs-icon-x1{
+  font-size:16px;
+  color:var(--rdfs-blue-x1);
+  transition:var(--rdfs-transition-x1);
+}
+
+.rdfs-header__link-x1:hover{
+  color:var(--rdfs-blue-dark-x1);
+}
+
+.rdfs-header__link-x1:hover .rdfs-icon-x1{
+  transform:translateY(-2px);
+}
+
+/* underline */
+.rdfs-header__link-x1::after{
+  content:"";
+  position:absolute;
+  left:0;
+  bottom:-6px;
+  width:0;
+  height:2px;
+  background:var(--rdfs-blue-dark-x1);
+  transition:var(--rdfs-transition-x1);
+}
+
+.rdfs-header__link-x1:hover::after{
+  width:100%;
+}
+
+/* ===============================
+   ACTIVE PAGE STYLES
+================================ */
+.rdfs-header__link-x1.is-active-x1{
+  color:var(--rdfs-blue-dark-x1);
+}
+
+.rdfs-header__link-x1.is-active-x1 .rdfs-icon-x1{
+  color:var(--rdfs-blue-dark-x1);
+}
+
+.rdfs-header__link-x1.is-active-x1::after{
+  width:100%;
+  background:var(--rdfs-blue-dark-x1);
+}
+
+/* ===============================
+   MOBILE MENU
+================================ */
+@media(max-width:768px){
+  .rdfs-header__toggle-x1{
+    display:block;
+  }
+
+  /* Hide navigation on mobile by default */
+  .rdfs-header__nav-x1{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    background:#fff;
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+    padding:0;
+    box-shadow:var(--rdfs-shadow-x1);
+    border-bottom-left-radius:var(--rdfs-radius-x1);
+    border-bottom-right-radius:var(--rdfs-radius-x1);
+    z-index:1199;
+    
+    /* Animation properties */
+    max-height:0;
+    overflow:hidden;
+    opacity:0;
+    transform:translateY(-10px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility:hidden;
+    pointer-events:none;
+  }
+
+  /* Show navigation when is-open class is added */
+  .rdfs-header__nav-x1.is-open-x1{
+    max-height:500px;
+    padding:20px;
+    opacity:1;
+    transform:translateY(0);
+    visibility:visible;
+    pointer-events:auto;
+  }
+
+  /* Mobile link styles */
+  .rdfs-header__link-x1{
+    padding:14px 16px;
+    font-size:17px;
+    letter-spacing:.8px;
+    border-radius:10px;
+    margin-bottom:0;
+    opacity:1;
+    transform:translateX(0);
+    transition: all 0.3s ease;
+    color:var(--rdfs-text-x1);
+    background:transparent;
+  }
+
+  /* Staggered animation for each link when opening */
+  .rdfs-header__nav-x1:not(.is-open-x1) .rdfs-header__link-x1{
+    opacity:0;
+    transform:translateX(-20px);
+  }
+
+  .rdfs-header__nav-x1.is-open-x1 .rdfs-header__link-x1:nth-child(1) { 
+    transition-delay: 0.1s; 
+  }
+  .rdfs-header__nav-x1.is-open-x1 .rdfs-header__link-x1:nth-child(2) { 
+    transition-delay: 0.15s; 
+  }
+  .rdfs-header__nav-x1.is-open-x1 .rdfs-header__link-x1:nth-child(3) { 
+    transition-delay: 0.2s; 
+  }
+
+  .rdfs-header__link-x1:hover{
+    background:rgba(17,38,102,.06);
+    transform:translateX(5px);
+    color:var(--rdfs-blue-dark-x1);
+  }
+
+  .rdfs-header__link-x1::after{
+    display:none;
+  }
+
+  .rdfs-header__link-x1.is-active-x1{
+    background:rgba(17,38,102,.1);
+    border-left:3px solid var(--rdfs-blue-dark-x1);
+    padding-left:19px;
+    color:var(--rdfs-blue-dark-x1);
+  }
+
+  /* Toggle icon animation */
+  .rdfs-header__toggle-x1 .rdfs-icon-x1{
+    transition: transform 0.3s ease;
+  }
+  
+  .rdfs-header__toggle-x1[aria-expanded="true"] .rdfs-icon-x1{
+    transform:rotate(90deg);
+  }
+}

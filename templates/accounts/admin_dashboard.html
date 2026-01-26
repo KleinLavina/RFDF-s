@@ -2,281 +2,262 @@
 {% load static %}
 {% block title %}Admin Dashboard | RDFS{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'styles/accounts/admin-dashboard.css' %}?v=1.0">
+{% endblock %}
+
 {% block content %}
-<style>
-/* ===============================
-   RDFS ADMIN DASHBOARD (SCOPED)
-================================ */
-:root{
-  --rdfs-blue:#112666;
-  --rdfs-blue-dark:#180f92;
-  --rdfs-blue-soft:#e8f4fd;
-
-  --rdfs-text:#1c1b1b;
-  --rdfs-muted:#64748b;
-
-  --gray-100:#f7fafc;
-  --gray-200:#edf2f7;
-  --gray-300:#e2e8f0;
-  --gray-600:#718096;
-
-  --shadow-sm:0 1px 3px rgba(0,0,0,.08);
-  --shadow-md:0 8px 18px rgba(0,0,0,.12);
-
-  --radius:10px;
-  --transition:.25s ease;
-}
-
-/* PAGE WRAPPER */
-.rdfs-adm-dash{
-  background:var(--gray-100);
-  min-height:100vh;
-}
-
-/* TITLE */
-.rdfs-adm-dash__title{
-  font-weight:700;
-  color:var(--rdfs-blue-dark);
-}
-
-/* SUMMARY CARDS */
-.rdfs-adm-dash__stat{
-  border-radius:var(--radius);
-  padding:1.1rem;
-  text-align:center;
-  color:#fff;
-  box-shadow:var(--shadow-sm);
-}
-
-.rdfs-adm-dash__stat h5{
-  font-size:.85rem;
-  text-transform:uppercase;
-  letter-spacing:.8px;
-  margin-bottom:.25rem;
-  opacity:.9;
-}
-
-.rdfs-adm-dash__stat h3{
-  font-weight:800;
-  margin:0;
-}
-
-/* STAT VARIANTS */
-.rdfs-adm-dash__stat--primary{
-  background:linear-gradient(135deg,var(--rdfs-blue),var(--rdfs-blue-dark));
-}
-.rdfs-adm-dash__stat--soft{
-  background:linear-gradient(135deg,#3a7bc8,#1a365d);
-}
-.rdfs-adm-dash__stat--neutral{
-  background:linear-gradient(135deg,#64748b,#475569);
-}
-.rdfs-adm-dash__stat--accent{
-  background:linear-gradient(135deg,#0f172a,#1e293b);
-}
-
-/* CONTENT CARD */
-.rdfs-adm-dash__card{
-  background:#fff;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow-md);
-  border:1px solid var(--gray-300);
-}
-
-.rdfs-adm-dash__card h5{
-  color:var(--rdfs-blue-dark);
-  font-weight:700;
-}
-
-/* TABLE */
-.rdfs-adm-dash__table thead{
-  background:var(--rdfs-blue-soft);
-}
-
-.rdfs-adm-dash__table th{
-  font-size:.85rem;
-  text-transform:uppercase;
-  letter-spacing:.6px;
-  color:var(--rdfs-blue-dark);
-  border-bottom:2px solid var(--rdfs-blue);
-}
-
-.rdfs-adm-dash__table tbody tr:hover{
-  background:rgba(17,38,102,.04);
-}
-
-/* STATUS BADGES */
-.rdfs-adm-dash__badge--queued{
-  background:rgba(17,38,102,.12);
-  color:var(--rdfs-blue-dark);
-}
-.rdfs-adm-dash__badge--boarding{
-  background:rgba(58,123,200,.18);
-  color:#1a365d;
-}
-.rdfs-adm-dash__badge--departed{
-  background:var(--gray-200);
-  color:var(--gray-600);
-}
-
-/* QUICK ACTIONS */
-.rdfs-adm-dash__action{
-  border-radius:var(--radius);
-  border:1px solid var(--gray-300);
-  background:#fff;
-  padding:1.2rem;
-  transition:var(--transition);
-  box-shadow:var(--shadow-sm);
-}
-
-.rdfs-adm-dash__action:hover{
-  transform:translateY(-4px);
-  box-shadow:var(--shadow-md);
-  border-color:var(--rdfs-blue);
-}
-
-.rdfs-adm-dash__action h6{
-  color:var(--rdfs-blue-dark);
-  font-weight:700;
-}
-
-.rdfs-adm-dash__btn{
-  background:var(--rdfs-blue);
-  color:#fff;
-  border-radius:6px;
-  padding:.35rem .75rem;
-  font-size:.8rem;
-}
-</style>
-
-<div class="container py-4 rdfs-adm-dash">
-
-  <h2 class="mb-2 rdfs-adm-dash__title">
-    <i class="bi bi-house-door-fill me-2"></i> Admin Dashboard
-  </h2>
-  <p class="text-muted">
-    Welcome back, <strong>{{ user.username }}</strong>.
-  </p>
-
-  <!-- SUMMARY -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-4">
-      <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--primary">
-        <h5>Drivers</h5>
-        <h3>{{ total_drivers }}</h3>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--soft">
-        <h5>Vehicles</h5>
-        <h3>{{ total_vehicles }}</h3>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--neutral">
-        <h5>In Queue</h5>
-        <h3>{{ total_queue }}</h3>
-      </div>
-    </div>
-  </div>
-
-  <div class="row g-3 mb-4">
-    <div class="col-md-6">
-      <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--accent">
-        <h5>Monthly Revenue</h5>
-        <h3>₱{{ monthly_revenue|floatformat:2 }}</h3>
-        <p class="mb-0 small text-white-75">
-          {{ now|date:"F Y" }}
-        </p>
-      </div>
-    </div>
-
-    <div class="col-md-6">
-      <div class="rdfs-adm-dash__stat rdfs-adm-dash__stat--accent">
-        <h5>Annual Revenue</h5>
-        <h3>₱{{ annual_revenue|floatformat:2 }}</h3>
-        <p class="mb-0 small text-white-75">
-          {{ now|date:"Y" }}
-        </p>
-      </div>
-    </div>
-  </div>
-
-  <!-- RECENT QUEUE -->
-  <div class="rdfs-adm-dash__card mb-4 p-3">
-    <h5 class="mb-3">Recent Queue Activity</h5>
-
-    {% if recent_queues %}
-    <div class="table-responsive">
-      <table class="table rdfs-adm-dash__table align-middle">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Plate</th>
-            <th>Vehicle</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for v in recent_queues %}
-          <tr>
-            <td>{{ forloop.counter }}</td>
-            <td><strong>{{ v.license_plate }}</strong></td>
-            <td>{{ v.vehicle_name }}</td>
-            <td>
-              {% if v.status == "queued" %}
-                <span class="badge rdfs-adm-dash__badge--queued">Queued</span>
-              {% elif v.status == "boarding" %}
-                <span class="badge rdfs-adm-dash__badge--boarding">Boarding</span>
-              {% else %}
-                <span class="badge rdfs-adm-dash__badge--departed">Departed</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-      <p class="text-muted text-center">
-        <i class="bi bi-info-circle"></i> No recent activity.
+<div class="admin-dashboard">
+  <div class="container">
+    
+    <!-- HEADER -->
+    <div class="admin-dashboard__header">
+      <h1 class="admin-dashboard__title">
+        <i class="bi bi-speedometer2"></i>
+        Admin Dashboard
+      </h1>
+      <p class="admin-dashboard__subtitle">
+        Welcome back, <strong>{{ user.username }}</strong>. Here is your system overview.
       </p>
-    {% endif %}
-  </div>
-
-  <!-- QUICK ACTIONS -->
-  <h5 class="mb-3 rdfs-adm-dash__title">Quick Actions</h5>
-  <div class="row g-3 mb-5">
-
-    <div class="col-md-4">
-      <a href="{% url 'reports:reports_home' %}" class="text-decoration-none">
-        <div class="rdfs-adm-dash__action text-center">
-          <h6>Reports & Analytics</h6>
-          <p class="small text-muted">View system metrics and insights</p>
-          <span class="rdfs-adm-dash__btn">Open</span>
-        </div>
-      </a>
     </div>
 
-    <div class="col-md-4">
-      <a href="{% url 'terminal:system_and_routes' %}" class="text-decoration-none">
-        <div class="rdfs-adm-dash__action text-center">
-          <h6>System & Routes</h6>
-          <p class="small text-muted">Configure settings and manage routes</p>
-          <span class="rdfs-adm-dash__btn">Open</span>
+    <!-- STAT CARDS ROW 1 -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-4">
+        <a href="{% url 'vehicles:registered_drivers' %}" class="text-decoration-none">
+          <div class="stat-card stat-card--primary">
+            <div class="stat-card__icon">
+              <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-card__label">Registered Drivers</div>
+            <div class="stat-card__value">{{ total_drivers }}</div>
+            <div class="stat-card__meta">Total active drivers · Click to view</div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-md-4">
+        <a href="{% url 'vehicles:registered_vehicles' %}" class="text-decoration-none">
+          <div class="stat-card stat-card--success">
+            <div class="stat-card__icon">
+              <i class="bi bi-truck-front-fill"></i>
+            </div>
+            <div class="stat-card__label">Registered Vehicles</div>
+            <div class="stat-card__value">{{ total_vehicles }}</div>
+            <div class="stat-card__meta">Total fleet size · Click to view</div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-md-4">
+        <a href="{% url 'terminal:transactions' %}" class="text-decoration-none">
+          <div class="stat-card stat-card--warning">
+            <div class="stat-card__icon">
+              <i class="bi bi-list-ol"></i>
+            </div>
+            <div class="stat-card__label">Active Queue</div>
+            <div class="stat-card__value">{{ total_queue }}</div>
+            <div class="stat-card__meta">Vehicles in terminal · Click to view</div>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- REVENUE CARDS ROW 2 -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <a href="{% url 'reports:reports_home' %}" class="text-decoration-none">
+          <div class="revenue-card">
+            <div class="revenue-card__icon">
+              <i class="bi bi-calendar-month"></i>
+            </div>
+            <div class="revenue-card__label">Monthly Revenue</div>
+            <div class="revenue-card__value">₱{{ monthly_revenue|floatformat:2 }}</div>
+            <div class="revenue-card__period">{{ now|date:"F Y" }} · Click for reports</div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-md-6">
+        <a href="{% url 'reports:reports_home' %}" class="text-decoration-none">
+          <div class="revenue-card">
+            <div class="revenue-card__icon">
+              <i class="bi bi-calendar-range"></i>
+            </div>
+            <div class="revenue-card__label">Annual Revenue</div>
+            <div class="revenue-card__value">₱{{ annual_revenue|floatformat:2 }}</div>
+            <div class="revenue-card__period">{{ now|date:"Y" }} · Click for reports</div>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- PROFIT CHART -->
+    <div class="row g-4 mb-4">
+      <div class="col-12">
+        <div class="chart-card">
+          <h3 class="chart-card__title">
+            <i class="bi bi-graph-up"></i>
+            7-Day Profit Trend
+          </h3>
+          <canvas id="profitChart" height="80"></canvas>
         </div>
-      </a>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div class="mb-4">
+      <h3 class="section-header__title mb-3">
+        <i class="bi bi-lightning-charge-fill"></i>
+        Quick Actions
+      </h3>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <a href="{% url 'reports:reports_home' %}" class="text-decoration-none">
+            <div class="action-card">
+              <div class="action-card__icon">
+                <i class="bi bi-bar-chart-fill"></i>
+              </div>
+              <h4 class="action-card__title">Reports & Analytics</h4>
+              <p class="action-card__description">
+                View detailed system metrics, revenue reports, and performance insights.
+              </p>
+              <button class="action-card__button">
+                View Reports
+              </button>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-md-4">
+          <a href="{% url 'terminal:system_and_routes' %}" class="text-decoration-none">
+            <div class="action-card">
+              <div class="action-card__icon">
+                <i class="bi bi-gear-fill"></i>
+              </div>
+              <h4 class="action-card__title">System & Routes</h4>
+              <p class="action-card__description">
+                Configure system settings, manage routes, and adjust terminal parameters.
+              </p>
+              <button class="action-card__button">
+                Configure
+              </button>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-md-4">
+          <a href="{% url 'accounts:manage_users' %}" class="text-decoration-none">
+            <div class="action-card">
+              <div class="action-card__icon">
+                <i class="bi bi-person-gear"></i>
+              </div>
+              <h4 class="action-card__title">Manage Users</h4>
+              <p class="action-card__description">
+                Create, edit, and manage admin and staff user accounts.
+              </p>
+              <button class="action-card__button">
+                Manage Users
+              </button>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="dashboard-footer">
+      <p>Last updated: {{ now|date:"F d, Y · g:i A" }}</p>
     </div>
 
   </div>
-
-  <div class="text-end">
-    <small class="text-muted">
-      Updated {{ now|date:"M d, Y · h:i A" }}
-    </small>
-  </div>
-
 </div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('profitChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ chart_labels|safe }},
+        datasets: [{
+          label: 'Daily Profit (₱)',
+          data: {{ chart_data|safe }},
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#2563eb',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointHoverBackgroundColor: '#1d4ed8',
+          pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(17, 38, 102, 0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            padding: 12,
+            borderColor: '#2563eb',
+            borderWidth: 1,
+            displayColors: false,
+            callbacks: {
+              label: function(context) {
+                return '₱' + context.parsed.y.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                });
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '₱' + value.toLocaleString();
+              },
+              color: '#6b7280',
+              font: {
+                size: 12
+              }
+            },
+            grid: {
+              color: '#e5e7eb',
+              drawBorder: false
+            }
+          },
+          x: {
+            ticks: {
+              color: '#6b7280',
+              font: {
+                size: 12
+              }
+            },
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
 {% endblock %}

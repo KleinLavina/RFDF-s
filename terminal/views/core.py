@@ -172,9 +172,8 @@ def transactions_view(request):
     # --------------------------------------------------
     # TODAY'S METRICS
     # --------------------------------------------------
-    active_queue = Vehicle.objects.filter(
-        status__in=["queued", "boarding"]
-    ).count()
+    # Active queue count: vehicles currently in terminal (is_active=True, status=success)
+    active_queue = EntryLog.objects.filter(is_active=True, status=EntryLog.STATUS_SUCCESS).count()
 
     # Today's entry logs count
     today_entry_logs = EntryLog.objects.filter(created_at__date=today).count()

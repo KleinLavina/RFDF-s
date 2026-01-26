@@ -1,0 +1,282 @@
+    /* ===================================================
+       MOBILE CARDS STYLING
+    =================================================== */
+    .mobile-cards-container {
+      display: none;
+      gap: 1rem;
+      flex-direction: column;
+    }
+    
+    .vehicle-card {
+      background: linear-gradient(135deg, #0c1c4a 0%, #112666 100%);
+      border-radius: 16px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 8px 25px rgba(12, 28, 74, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .vehicle-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(12, 28, 74, 0.2);
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    
+    .card-number {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    
+    .card-plate {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      letter-spacing: 1px;
+      font-size: 0.95rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .card-details {
+      display: grid;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    
+    .detail-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    
+    .detail-icon {
+      color: #64b5f6;
+      width: 20px;
+      text-align: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    
+    .detail-content {
+      flex: 1;
+    }
+    
+    .detail-label {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+    }
+    
+    .detail-value {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: white;
+      line-height: 1.4;
+    }
+    
+    .route-tag {
+      background: rgba(100, 181, 246, 0.2);
+      color: #64b5f6;
+      padding: 0.35rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-block;
+      border: 1px solid rgba(100, 181, 246, 0.3);
+    }
+    
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    
+    .status-badge-mobile {
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .status-active-mobile {
+      background: rgba(46, 204, 113, 0.2);
+      color: #2ecc71;
+      border: 1px solid rgba(46, 204, 113, 0.3);
+    }
+    
+    .status-departed-mobile {
+      background: rgba(108, 117, 125, 0.2);
+      color: #adb5bd;
+      border: 1px solid rgba(108, 117, 125, 0.3);
+    }
+    
+    .countdown-mobile {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      text-align: center;
+      min-width: 80px;
+    }
+    
+    .countdown-danger {
+      background: rgba(220, 53, 69, 0.2);
+      border-color: rgba(220, 53, 69, 0.3);
+      color: #ff6b6b;
+      animation: pulse 1s infinite;
+    }
+    
+    .expired-badge-mobile {
+      background: rgba(220, 53, 69, 0.2);
+      color: #ff6b6b;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+    
+    .departed-badge-mobile {
+      background: rgba(108, 117, 125, 0.2);
+      color: #adb5bd;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(108, 117, 125, 0.3);
+    }
+    
+    .departure-time-mobile {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+    
+    /* ===================================================
+       RESPONSIVE BREAKPOINTS
+    =================================================== */
+    @media (max-width: 768px) {
+      .mobile-cards-container {
+        display: flex;
+      }
+      
+      table {
+        display: none;
+      }
+      
+      .table-card {
+        padding: 1rem;
+      }
+    }
+    
+    @media (min-width: 769px) {
+      .mobile-cards-container {
+        display: none !important;
+      }
+      
+      table {
+        display: table;
+      }
+    }
+
+.route-tag {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.card-plate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.status-pill-boarding {
+  background: #e0f2fe;
+  color: #0f172a;
+}
+.status-pill-queued {
+  background: #fef9c3;
+  color: #5c3f00;
+}
+.status-pill-departed {
+  background: #fee2e2;
+  color: #7c0a02;
+}
+.status-pill-idle {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+.detail-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+.detail-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: white;
+  line-height: 1.4;
+}

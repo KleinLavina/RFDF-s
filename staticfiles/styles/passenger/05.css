@@ -1,0 +1,640 @@
+.mobile-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: space-between;
+}
+.vehicle-card {
+  width: calc(50% - 0.35rem);
+  min-height: 160px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #020617 0%, #090f2f 70%, #121b45 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.4rem;
+  box-shadow: 0 8px 18px rgba(3, 5, 18, 0.45);
+  color: white;
+  font-family: "Inter", system-ui, sans-serif;
+}
+.vehicle-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(3, 5, 18, 0.6);
+}
+.card-header,
+.card-body,
+.card-countdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.card-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.1rem;
+}
+.card-plate {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+.status-pill {
+  font-size: 0.6rem;
+  padding: 0.15rem 0.55rem;
+}
+.card-body {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 0.35rem;
+}
+.detail-row {
+  gap: 0.25rem;
+}
+.times-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.2rem;
+}
+.time-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 0.2rem;
+}
+.time-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+.time-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.card-countdown {
+  padding-top: 0.2rem;
+}
+.countdown-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.65);
+}
+.countdown-timer span {
+  font-size: 0.65rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+}
+.queued-badge,
+.departed-badge {
+  font-size: 0.65rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.departed-badge {
+  color: #ffc7c7;
+  border-color: rgba(255, 90, 90, 0.4);
+}
+.mobile-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.vehicle-card {
+  border-radius: 10px;
+  background: linear-gradient(180deg, #030712 0%, #0b1432 70%, #101f43 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.35rem;
+  box-shadow: 0 8px 16px rgba(2, 7, 24, 0.5);
+  color: white;
+  font-family: "Inter", system-ui, sans-serif;
+  margin: 0;
+  min-height: 160px;
+}
+.vehicle-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(2, 7, 24, 0.7);
+}
+.card-header,
+.card-body,
+.card-countdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.card-header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.1rem;
+  padding: 0 0.25rem;
+}
+.card-plate {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+.status-pill {
+  font-size: 0.55rem;
+  padding: 0.12rem 0.5rem;
+}
+.card-body {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 0.25rem;
+}
+.detail-row {
+  gap: 0.2rem;
+}
+.times-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem;
+}
+.time-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 0.15rem;
+  flex: 1;
+}
+.time-label {
+  font-size: 0.5rem;
+}
+.time-value {
+  font-size: 0.72rem;
+}
+.card-countdown {
+  padding-top: 0.2rem;
+}
+.countdown-label {
+  font-size: 0.5rem;
+}
+.countdown-timer span {
+  font-size: 0.6rem;
+  padding: 0.2rem 0.45rem;
+}
+/* ===============================
+   MOBILE CARDS STYLING
+   For screens ≤ 768px
+================================ */
+
+.mobile-cards-container {
+  display: none;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+/* Card Container */
+.vehicle-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.vehicle-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.vehicle-card.departed-row {
+  opacity: 0.85;
+  background: #f8f9fa;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem 1.25rem 1rem;
+  border-bottom: 1px solid #f1f3f4;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.vehicle-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vehicle-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.vehicle-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.vehicle-plate {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.2;
+}
+
+.driver-name {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+/* Status Pill */
+.status-pill {
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+}
+
+.status-pill-queued {
+  background-color: #e7f5ff;
+  color: #0c63e4;
+  border-color: #b3d9ff;
+}
+
+.status-pill-boarding {
+  background-color: #d1fae5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+.status-pill-departed {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+/* Card Body */
+.card-body {
+  padding: 1.25rem;
+}
+
+.info-section {
+  margin-bottom: 1.5rem;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #495057;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.info-label i {
+  color: #4361ee;
+  font-size: 1rem;
+}
+
+.route-tag {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #4361ee15 0%, #3a0ca315 100%);
+  border: 1px solid #4361ee30;
+  border-radius: 8px;
+  color: #4361ee;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Times Grid */
+.times-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e9ecef;
+}
+
+.time-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+  color: #6c757d;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.time-label i {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.time-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.3;
+}
+
+/* Card Footer */
+.card-countdown {
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid #f1f3f4;
+  background: #f8fafc;
+}
+
+.countdown-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.countdown-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #495057;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.countdown-label i {
+  color: #4361ee;
+  font-size: 1.1rem;
+}
+
+.countdown-timer {
+  display: flex;
+  align-items: center;
+}
+
+.countdown-mobile {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: #059669;
+  padding: 0.4rem 0.8rem;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #d1fae5;
+  min-width: 70px;
+  text-align: center;
+}
+
+.countdown-mobile.countdown-danger {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fff5f5;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.queued-badge {
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 0.4rem 0.8rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.departed-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  background: #fef2f2;
+  border-radius: 6px;
+}
+
+.departed-badge i {
+  font-size: 0.9rem;
+}
+
+/* Compact overrides */
+.mobile-cards-container {
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.vehicle-card {
+  width: calc(50% - 0.45rem);
+  padding: 0.65rem;
+  min-height: 190px;
+}
+.card-header {
+  padding: 0.65rem 0;
+  margin-bottom: 0.3rem;
+}
+.card-body {
+  padding: 0.6rem;
+}
+.detail-row {
+  gap: 0.4rem;
+}
+.time-label span,
+.countdown-label span {
+  font-size: 0.6rem;
+}
+.time-value,
+.queued-badge,
+.departed-badge,
+.countdown-timer span {
+  font-size: 0.8rem;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6c757d;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  color: #adb5bd;
+  margin-bottom: 1rem;
+}
+
+.empty-state h4 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #495057;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 768px) {
+  .mobile-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.35rem 0;
+  }
+
+  .vehicle-card {
+    width: 100%;
+  }
+
+  .vehicle-card--landscape {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    min-height: 110px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e5e9f0;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  }
+
+  .vehicle-card--landscape.departed-row {
+    opacity: 1;
+    background: #f6f8fb;
+  }
+
+  .vehicle-card--landscape .card-header,
+  .vehicle-card--landscape .card-body,
+  .vehicle-card--landscape .card-countdown {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .vehicle-card--landscape .card-header {
+    flex: 0 0 170px;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .vehicle-card--landscape .card-body {
+    flex: 1;
+    flex-direction: column;
+    gap: 0.35rem;
+    justify-content: center;
+  }
+
+  .vehicle-card--landscape .info-section {
+    margin: 0;
+  }
+
+  .vehicle-card--landscape .times-grid {
+    display: flex;
+    flex-direction: row;
+    gap: 0.35rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .vehicle-card--landscape .time-item {
+    padding: 0.2rem 0.4rem;
+    background: rgba(67, 97, 238, 0.08);
+    border-radius: 6px;
+    flex: 1;
+  }
+
+  .vehicle-card--landscape .card-countdown {
+    flex: 0 0 auto;
+    align-items: flex-end;
+  }
+
+  .vehicle-card--landscape .countdown-section {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+  }
+
+  .vehicle-card--landscape .countdown-timer span,
+  .vehicle-card--landscape .queued-badge,
+  .vehicle-card--landscape .departed-badge {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.45rem;
+  }
+
+  .vehicle-card--landscape .vehicle-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .vehicle-card--landscape .vehicle-plate {
+    font-size: 1rem;
+  }
+
+  .vehicle-card--landscape .driver-name {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .card-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .vehicle-info {
+    justify-content: space-between;
+  }
+  
+  .countdown-section {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  
+  .countdown-timer {
+    justify-content: center;
+  }
+}
+
+/* Loading Animation */
+.vehicle-card.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.vehicle-card.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.4), 
+    transparent);
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
