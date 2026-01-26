@@ -735,7 +735,6 @@ def system_settings(request):
                 'jeepney_max_seats',
                 'van_max_seats',
                 'bus_max_seats',
-                'theme_preference',
             ]
             widgets = {
                 'terminal_fee': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
@@ -747,7 +746,6 @@ def system_settings(request):
                 'jeepney_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
                 'van_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
                 'bus_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-                'theme_preference': forms.Select(attrs={'class': 'form-select'}),
             }
 
     form = SettingsForm(request.POST or None, instance=settings)
@@ -1115,6 +1113,147 @@ def manage_routes(request):
     }
 
     return render(request, "terminal/manage_routes.html", context)
+
+
+@login_required(login_url='accounts:login')
+@user_passes_test(is_admin)
+@never_cache
+def system_and_routes(request):
+    """Unified admin page for system settings and route management."""
+    from django.db.models import Count, Sum
+    
+    settings = SystemSettings.get_solo()
+
+    # Settings Form
+    class SettingsForm(forms.ModelForm):
+        class Meta:
+            model = SystemSettings
+            fields = [
+                'terminal_fee',
+                'min_deposit_amount',
+                'entry_cooldown_minutes',
+                'departure_duration_minutes',
+                'countdown_duration_seconds',
+                'queue_refresh_interval_seconds',
+                'jeepney_max_seats',
+                'van_max_seats',
+                'bus_max_seats',
+            ]
+            widgets = {
+                'terminal_fee': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+                'min_deposit_amount': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+                'entry_cooldown_minutes': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+                'departure_duration_minutes': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+                'countdown_duration_seconds': forms.NumberInput(attrs={'class': 'form-control', 'min': '5', 'max': '300'}),
+                'queue_refresh_interval_seconds': forms.NumberInput(attrs={'class': 'form-control', 'min': '5', 'max': '120'}),
+                'jeepney_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+                'van_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+                'bus_max_seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            }
+
+    # Handle POST requests
+    if request.method == "POST":
+        action = request.POST.get("action")
+        
+        # ROUTE ACTIONS
+        if action in ["add", "edit", "delete"]:
+            route_id = request.POST.get("route_id")
+            name = request.POST.get("name", "").strip()
+            origin = request.POST.get("origin", "").strip()
+            destination = request.POST.get("destination", "").strip()
+            base_fare = request.POST.get("base_fare", "").strip()
+            active = bool(request.POST.get("active"))
+
+            if not origin or not destination:
+                messages.error(request, "⚠️ Both origin and destination are required.")
+                return redirect("terminal:system_and_routes")
+
+            try:
+                base_fare = Decimal(base_fare) if base_fare else Decimal("0.00")
+            except Exception:
+                base_fare = Decimal("0.00")
+
+            existing = Route.objects.filter(
+                origin__iexact=origin,
+                destination__iexact=destination
+            ).exclude(id=route_id).exists()
+            if existing and action != "delete":
+                messages.error(request, f"⚠️ Route {origin} → {destination} already exists.")
+                return redirect("terminal:system_and_routes")
+
+            if action == "add":
+                Route.objects.create(
+                    name=name or f"{origin} - {destination}",
+                    origin=origin,
+                    destination=destination,
+                    base_fare=base_fare,
+                    active=active,
+                )
+                messages.success(request, f"✅ Route {origin} → {destination} added successfully!")
+
+            elif action == "edit" and route_id:
+                route = get_object_or_404(Route, id=route_id)
+                route.name = name or f"{origin} - {destination}"
+                route.origin = origin
+                route.destination = destination
+                route.base_fare = base_fare
+                route.active = active
+                route.save()
+                messages.success(request, f"✅ Route {origin} → {destination} updated successfully!")
+
+            elif action == "delete" and route_id:
+                route = get_object_or_404(Route, id=route_id)
+                route_name = f"{route.origin} → {route.destination}"
+                route.delete()
+                messages.success(request, f"🗑️ Route {route_name} deleted successfully!")
+
+            return redirect("terminal:system_and_routes")
+        
+        # SETTINGS SAVE
+        else:
+            form = SettingsForm(request.POST, instance=settings)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "✅ System settings updated successfully!")
+                return redirect('terminal:system_and_routes')
+            else:
+                messages.error(request, "❌ Please correct the errors below.")
+    else:
+        form = SettingsForm(instance=settings)
+
+    # Route Analytics
+    routes = Route.objects.all().order_by('origin', 'destination')
+    route_stats = (
+        EntryLog.objects
+        .filter(vehicle__route__isnull=False)
+        .values('vehicle__route__id', 'vehicle__route__origin', 'vehicle__route__destination')
+        .annotate(
+            total_trips=Count('id'),
+            total_fees=Sum('fee_charged')
+        )
+        .order_by('-total_trips')
+    )
+
+    total_trips = sum(item['total_trips'] for item in route_stats)
+    total_fees = sum(item['total_fees'] or 0 for item in route_stats)
+    active_routes = routes.filter(active=True).count()
+    top_route = route_stats[0] if route_stats else None
+
+    chart_labels = json.dumps([f"{r['vehicle__route__origin']} → {r['vehicle__route__destination']}" for r in route_stats])
+    chart_data = json.dumps([r['total_trips'] for r in route_stats])
+
+    context = {
+        "form": form,
+        "routes": routes,
+        "total_trips": total_trips,
+        "total_fees": total_fees,
+        "active_routes": active_routes,
+        "top_route": top_route,
+        "chart_labels": chart_labels,
+        "chart_data": chart_data,
+    }
+
+    return render(request, "terminal/system_and_routes.html", context)
 
 
 

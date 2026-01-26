@@ -3,7 +3,7 @@
 <!-- ===============================
      RDFS STAFF SIDEBAR (ULTRA COMPACT + STICKY)
 ================================ -->
-<aside class="rdfs-sidebar">
+<div class="rdfs-sidebar">
 
   <!-- TOP (LOGO) -->
   <div class="rdfs-sidebar__top">
@@ -80,7 +80,7 @@
         </button>
         <ul class="rdfs-sidebar__group-list" aria-hidden="true">
           <li class="rdfs-sidebar__item">
-            <a href="{% url 'terminal:deposit_menu' %}" class="rdfs-sidebar__link" data-title="Deposits">
+            <a href="{% url 'terminal:deposits' %}" class="rdfs-sidebar__link" data-title="Deposits">
               <i class="bi bi-cash-stack"></i><span>Deposits</span>
             </a>
           </li>
@@ -132,7 +132,7 @@
     </a>
   </div>
 
-</aside>
+</div>
 
 <style>
 :root{

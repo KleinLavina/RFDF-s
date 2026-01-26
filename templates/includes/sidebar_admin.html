@@ -1,5 +1,5 @@
 {% load static %}
-<aside class="rdfs-adm-sb">
+<div class="rdfs-adm-sb">
 
   <!-- TOP (LOGO) -->
   <div class="rdfs-adm-sb__top">
@@ -82,7 +82,7 @@
         </button>
         <ul class="rdfs-adm-sb__group-list" aria-hidden="true">
           <li class="rdfs-adm-sb__item">
-            <a href="{% url 'terminal:deposit_menu' %}" class="rdfs-adm-sb__link" data-title="Deposits">
+            <a href="{% url 'terminal:deposits' %}" class="rdfs-adm-sb__link" data-title="Deposits">
               <i class="bi bi-cash-stack"></i>
               <span>Deposits</span>
             </a>
@@ -130,15 +130,9 @@
             </a>
           </li>
           <li class="rdfs-adm-sb__item">
-            <a href="{% url 'terminal:system_settings' %}" class="rdfs-adm-sb__link" data-title="System Settings">
-              <i class="bi bi-sliders2"></i>
-              <span>System Settings</span>
-            </a>
-          </li>
-          <li class="rdfs-adm-sb__item">
-            <a href="{% url 'terminal:manage_routes' %}" class="rdfs-adm-sb__link" data-title="Routes">
-              <i class="bi bi-map-fill"></i>
-              <span>Routes</span>
+            <a href="{% url 'terminal:system_and_routes' %}" class="rdfs-adm-sb__link" data-title="System & Routes">
+              <i class="bi bi-gear-fill"></i>
+              <span>System & Routes</span>
             </a>
           </li>
         </ul>
@@ -155,7 +149,7 @@
     </a>
   </div>
 
-</aside>
+</div>
 
 
 <!-- ===============================

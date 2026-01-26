@@ -12,18 +12,7 @@ from django.db.models import Sum, Count
 from django.utils import timezone
 from django.http import JsonResponse
 from datetime import timedelta
-from accounts.utils import is_admin
-
-
-# ===============================
-# ✅ ROLE HELPERS
-# ===============================
-def is_admin(user):
-    return user.is_authenticated and (user.is_superuser or getattr(user, 'role', '') == 'admin')
-
-
-def is_staff_admin(user):
-    return user.is_authenticated and getattr(user, 'role', '') == 'staff_admin'
+from accounts.utils import is_admin, is_staff_admin, is_staff_admin_or_admin
 
 
 # ===============================

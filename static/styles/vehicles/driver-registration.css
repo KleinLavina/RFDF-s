@@ -3,6 +3,12 @@
    Color Palette: RDFS Blue (#112666), Accent (#2563eb)
 ===================================================== */
 
+/* Prevent horizontal scroll */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 :root {
   --rdfs-blue: #112666;
   --rdfs-blue-dark: #0c1c4a;
@@ -39,6 +45,7 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* =====================================================
@@ -527,12 +534,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 ===================================================== */
 .row.g-3 {
   margin-bottom: 0.5rem;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .col-md-3,
 .col-md-4,
 .col-md-6 {
   margin-bottom: 1rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 /* =====================================================
