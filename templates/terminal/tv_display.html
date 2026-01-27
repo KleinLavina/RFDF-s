@@ -9,96 +9,77 @@
   <link rel="icon" type="image/png" href="{% static 'img/RDFS-Logo.png' %}">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="{% static 'styles/terminal/tv_display.css' %}?v=3.0" rel="stylesheet">
+  <link href="{% static 'styles/terminal/tv_display.css' %}?v=4.0" rel="stylesheet">
 </head>
 
 <body>
 
-<!-- HEADER -->
+<!-- COMPACT HEADER -->
 <header class="tv-header">
-  <div class="tv-header__left">
-    <div class="tv-logo">
+  <div class="header-left">
+    <div class="terminal-logo">
       <i class="fa-solid fa-bus"></i>
-      <span>RDFS Terminal</span>
-    </div>
-    <div class="tv-route-badge">
-      <i class="fa-solid fa-route"></i>
-      <span id="selectedRouteLabel">
-        {% if selected_route %}{{ selected_route }}{% else %}All Routes{% endif %}
-      </span>
+      <span>RDFS TERMINAL</span>
     </div>
   </div>
-  <div class="tv-header__right">
-    <div class="tv-clock">
-      <span id="current-date" class="tv-clock__date"></span>
-      <span id="current-time" class="tv-clock__time"></span>
+  <div class="header-center">
+    <div class="route-display">
+      <i class="fa-solid fa-route"></i>
+      <span id="selectedRouteLabel">{% if selected_route %}{{ selected_route }}{% else %}ALL ROUTES{% endif %}</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="datetime-display">
+      <div class="date-line" id="current-date"></div>
+      <div class="time-line" id="current-time"></div>
+    </div>
+    <div class="status-indicator">
+      <span class="status-dot"></span>
+      <span class="status-text">LIVE</span>
     </div>
   </div>
 </header>
 
-<!-- MAIN DEPARTURE BOARD -->
-<main class="tv-main">
+<!-- DEPARTURE BOARD -->
+<main class="departure-board">
   
-  <!-- Column Headers -->
-  <div class="departure-board__header">
-    <div class="col-route">Route</div>
-    <div class="col-vehicle">Vehicle</div>
-    <div class="col-driver">Driver</div>
-    <div class="col-entry">Entry Time</div>
-    <div class="col-departure">Departure</div>
-    <div class="col-status">Status</div>
-    <div class="col-countdown">Time Remaining</div>
+  <!-- Board Header -->
+  <div class="board-header">
+    <div class="col-time">
+      <i class="fa-solid fa-clock"></i>
+      DEPARTURE
+    </div>
+    <div class="col-route">
+      <i class="fa-solid fa-route"></i>
+      ROUTE
+    </div>
+    <div class="col-destination">
+      <i class="fa-solid fa-location-dot"></i>
+      DESTINATION
+    </div>
+    <div class="col-vehicle">
+      <i class="fa-solid fa-bus"></i>
+      VEHICLE
+    </div>
+    <div class="col-status">
+      <i class="fa-solid fa-circle-info"></i>
+      STATUS
+    </div>
   </div>
 
-  <!-- Departure List -->
-  <div class="departure-board__list" id="departureList">
-    <!-- Rows will be dynamically inserted here -->
+  <!-- Departure Rows -->
+  <div class="board-rows" id="departureList">
+    <!-- Rows dynamically inserted -->
   </div>
 
   <!-- Empty State -->
-  <div class="departure-board__empty" id="emptyState" style="display: none;">
-    <i class="fa-solid fa-hourglass-half"></i>
-    <p>No active departures</p>
-    <small>Waiting for vehicles to enter terminal</small>
+  <div class="board-empty" id="emptyState" style="display: none;">
+    <i class="fa-solid fa-calendar-xmark"></i>
+    <p>NO SCHEDULED DEPARTURES</p>
+    <small>Please check back later</small>
   </div>
 
 </main>
-
-<!-- FOOTER -->
-<footer class="tv-footer">
-  <div class="tv-footer__left">
-    <a href="{% if user.role == 'admin' %}{% url 'accounts:admin_dashboard' %}{% else %}{% url 'accounts:staff_dashboard' %}{% endif %}" class="tv-btn tv-btn--back">
-      <i class="fa-solid fa-arrow-left"></i>
-      <span>Back to Dashboard</span>
-    </a>
-  </div>
-  <div class="tv-footer__center">
-    <div class="status-legend">
-      <span class="legend-item">
-        <span class="status-dot status-boarding"></span>
-        <span>Boarding</span>
-      </span>
-      <span class="legend-item">
-        <span class="status-dot status-departed"></span>
-        <span>Departed</span>
-      </span>
-      <span class="legend-item">
-        <span class="status-dot status-queued"></span>
-        <span>Queued</span>
-      </span>
-    </div>
-  </div>
-  <div class="tv-footer__right">
-    <button id="fullscreenBtn" class="tv-btn tv-btn--fullscreen">
-      <i class="fa-solid fa-expand"></i>
-      <span>Fullscreen</span>
-    </button>
-    <div class="connection-status" id="connectionStatus">
-      <span class="connection-dot"></span>
-      <span class="connection-text">Connected</span>
-    </div>
-  </div>
-</footer>
 
 <script src="{% static 'js/terminal/tv_display.js' %}?v=3.0"></script>
 <script>
