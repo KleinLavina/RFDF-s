@@ -396,7 +396,7 @@ def tv_display_view(request, route_slug=None):
         if "visible_entries" not in section:
             section["visible_entries"] = [
                 e for e in section.get("entries", [])
-                if e.get("status") in ("Boarding", "Departed")
+                if e.get("status") in ("Queued", "Boarding")
             ]
         section["slug"] = slugify(section.get("name", ""))
         section["history_events"] = tv_state.get("history", {}).get(section.get("name"), [])

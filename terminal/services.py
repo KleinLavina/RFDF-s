@@ -400,15 +400,16 @@ class QueueService:
     def get_tv_display_state(route_filter=None):
         """
         Get queue state optimized for TV display.
-        Shows boarding and departed only in main list, queued as badge count.
+        Shows all active vehicles (Queued and Boarding) with countdown timers.
         """
         full_state = QueueService.get_queue_state(route_filter=route_filter, include_queued=True)
 
-        # Filter entries to show only boarding and departed
+        # Don't filter - show all active vehicles (Queued and Boarding)
+        # Departed vehicles are excluded by default in get_queue_state after visibility timeout
         for section in full_state["route_sections"]:
             section["visible_entries"] = [
                 e for e in section["entries"]
-                if e["status"] in (QUEUE_STATUS_BOARDING, QUEUE_STATUS_DEPARTED)
+                if e["status"] in (QUEUE_STATUS_QUEUED, QUEUE_STATUS_BOARDING)
             ]
 
         # Collect history events

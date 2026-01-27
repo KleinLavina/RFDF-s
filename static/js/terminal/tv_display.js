@@ -109,7 +109,8 @@ function updateDepartureBoard(data) {
     data.route_sections.forEach(section => {
       if (section.entries && Array.isArray(section.entries)) {
         section.entries.forEach(entry => {
-          // Only show active vehicles (Queued or Boarding)
+          // Show all active vehicles (Queued and Boarding)
+          // Backend returns "Queued" and "Boarding" status
           if (entry.status === 'Queued' || entry.status === 'Boarding') {
             allEntries.push({
               ...entry,
@@ -120,6 +121,10 @@ function updateDepartureBoard(data) {
       }
     });
   }
+  
+  // Debug logging
+  console.log('TV Display Data:', data);
+  console.log('All Entries:', allEntries);
   
   // Store current entries
   currentEntries = allEntries;
@@ -330,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateDateTime();
   setInterval(updateDateTime, 1000);
   
-  // Load initial data
+  // Load initial data immediately
   refreshDepartureBoard();
   
   // Set up auto-refresh
