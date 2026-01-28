@@ -103,18 +103,27 @@ function updateDepartureBoard(data) {
   Object.values(countdownIntervals).forEach(interval => clearInterval(interval));
   countdownIntervals = {};
   
-  // Extract all entries from route sections (only active vehicles)
+  // Debug logging
+  console.log('TV Display Raw Data:', data);
+  
+  // Extract all entries - handle both data structures
   let allEntries = [];
-  if (data.route_sections && Array.isArray(data.route_sections)) {
+  
+  // Check if data has entries array directly (like public_queue_api)
+  if (data.entries && Array.isArray(data.entries)) {
+    allEntries = data.entries.filter(entry => 
+      entry.status === 'Queued' || entry.status === 'Boarding'
+    );
+  }
+  // Otherwise check route_sections structure (like tv_display_api)
+  else if (data.route_sections && Array.isArray(data.route_sections)) {
     data.route_sections.forEach(section => {
       if (section.entries && Array.isArray(section.entries)) {
         section.entries.forEach(entry => {
-          // Show all active vehicles (Queued and Boarding)
-          // Backend returns "Queued" and "Boarding" status
           if (entry.status === 'Queued' || entry.status === 'Boarding') {
             allEntries.push({
               ...entry,
-              route: section.name || 'Unknown Route'
+              route: section.name || entry.route || 'Unknown Route'
             });
           }
         });
@@ -122,9 +131,7 @@ function updateDepartureBoard(data) {
     });
   }
   
-  // Debug logging
-  console.log('TV Display Data:', data);
-  console.log('All Entries:', allEntries);
+  console.log('Filtered Entries:', allEntries);
   
   // Store current entries
   currentEntries = allEntries;
@@ -326,6 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const serverTime = new Date(config.serverTime).getTime();
       const clientTime = Date.now();
       serverTimeOffset = serverTime - clientTime;
+      console.log('Server time synced, offset:', serverTimeOffset);
     } catch (e) {
       console.error('Error syncing server time:', e);
     }
@@ -336,6 +344,8 @@ document.addEventListener('DOMContentLoaded', function() {
   setInterval(updateDateTime, 1000);
   
   // Load initial data immediately
+  console.log('Initializing TV Display...');
+  console.log('API URL:', config.apiUrl);
   refreshDepartureBoard();
   
   // Set up auto-refresh
