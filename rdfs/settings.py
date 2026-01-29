@@ -34,6 +34,11 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
 if DEBUG:
     ALLOWED_HOSTS.append('*')
 
+# Auto-detect Render.com deployment
+RENDER_EXTERNAL_HOSTNAME = env('RENDER_EXTERNAL_HOSTNAME', default=None)
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 # ======================================================
 # INSTALLED APPS
 # ======================================================
